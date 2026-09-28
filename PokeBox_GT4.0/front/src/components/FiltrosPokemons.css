@@ -1,0 +1,94 @@
+/* Painel de filtros da lista de Pokémon */
+.filtros {
+  --filtros-ink: #1d1d1f;
+  --filtros-navy: #003a70;
+  --filtros-blue: #3d7dca;
+  --filtros-yellow: #ffcb05;
+
+  margin-bottom: 24px;
+}
+
+.filtros-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.filtros-alternar,
+.filtros-limpar {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--filtros-navy);
+  background: #fff;
+  border: 2px solid var(--filtros-ink);
+  border-radius: 999px;
+  box-shadow: 0 3px 0 var(--filtros-ink);
+  cursor: pointer;
+}
+
+.filtros-alternar[aria-expanded='true'] {
+  background: var(--filtros-yellow);
+}
+
+.filtros-limpar {
+  color: #fff;
+  background: #dc1030;
+}
+
+.filtros-alternar:active,
+.filtros-limpar:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--filtros-ink);
+}
+
+.filtros-painel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 14px;
+  max-width: 560px;
+  margin-top: 14px;
+  padding: 16px;
+  background: #fff;
+  border: 3px solid var(--filtros-ink);
+  border-radius: 16px;
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.2);
+}
+
+.filtros-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.filtros-campo > span {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--filtros-navy);
+}
+
+.filtros-campo select {
+  width: 100%;
+  padding: 9px 10px;
+  font-size: 15px;
+  color: var(--filtros-ink);
+  background: #f7f7f7;
+  border: 2px solid var(--filtros-ink);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.filtros-campo select:disabled {
+  color: #888;
+  cursor: wait;
+}
+
+.filtros-campo select:focus-visible,
+.filtros-alternar:focus-visible,
+.filtros-limpar:focus-visible {
+  outline: 3px solid var(--filtros-blue);
+  outline-offset: 2px;
+}

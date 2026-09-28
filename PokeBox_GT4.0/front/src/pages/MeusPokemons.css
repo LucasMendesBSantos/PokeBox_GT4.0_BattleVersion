@@ -1,0 +1,286 @@
+.meus-pokemons-page {
+  --poke-yellow: #ffcb05;
+  --poke-blue: #3d7dca;
+  --poke-navy: #003a70;
+  --poke-ink: #1d1d1f;
+  --dex-red: #dc1030;
+  --dex-lens: #2a95e0;
+
+  min-height: 100svh;
+  background:
+    radial-gradient(circle, rgba(0, 58, 112, 0.08) 1.5px, transparent 1.5px) 0 0 / 18px 18px,
+    #f2f4f8;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  color: var(--poke-ink);
+}
+
+/* Barra vermelha no topo, no estilo da Pokédex */
+.meus-pokemons-topo {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--dex-red);
+  border-bottom: 4px solid var(--poke-ink);
+}
+
+.meus-pokemons-topo-conteudo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 10px 16px;
+}
+
+.meus-pokemons-marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.meus-pokemons-lente {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  background:
+    radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.85) 0 12%, transparent 13%),
+    var(--dex-lens);
+  border: 4px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--poke-ink);
+}
+
+.meus-pokemons-titulo {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: var(--poke-yellow);
+  -webkit-text-stroke: 2px var(--poke-navy);
+  paint-order: stroke fill;
+  text-shadow: 2px 2px 0 var(--poke-navy);
+}
+
+.meus-pokemons-usuario {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.meus-pokemons-sair {
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--poke-navy);
+  background: var(--poke-yellow);
+  border: 2px solid var(--poke-ink);
+  border-radius: 999px;
+  box-shadow: 0 3px 0 var(--poke-ink);
+  cursor: pointer;
+}
+
+/* Botão "Todos os Pokémon" */
+.meus-pokemons-todos {
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--poke-navy);
+  background: #fff;
+  border: 2px solid var(--poke-ink);
+  border-radius: 999px;
+  box-shadow: 0 3px 0 var(--poke-ink);
+  cursor: pointer;
+}
+
+.meus-pokemons-todos:active,
+.meus-pokemons-sair:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--poke-ink);
+}
+
+.meus-pokemons-conteudo {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  box-sizing: border-box;
+}
+
+/* Títulos e textos */
+.meus-pokemons-titulo-secao {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--poke-navy);
+}
+
+.meus-pokemons-texto {
+  margin: 6px 0 24px;
+  font-size: 16px;
+  color: #555;
+}
+
+/* Escolha do Pokémon inicial */
+.meus-pokemons-inicial {
+  padding-bottom: 96px;
+}
+
+.meus-pokemons-geracao {
+  margin-bottom: 28px;
+}
+
+.meus-pokemons-geracao h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--poke-navy);
+}
+
+.meus-pokemons-opcoes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.meus-pokemons-opcao {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 8px 14px;
+  font-family: inherit;
+  color: var(--poke-ink);
+  background: color-mix(in srgb, var(--meus-pokemons-cor) 18%, #fff);
+  border: 3px solid var(--poke-ink);
+  border-radius: 16px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.meus-pokemons-opcao:hover {
+  transform: translateY(-2px);
+  box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.2);
+}
+
+.meus-pokemons-opcao[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--meus-pokemons-cor) 45%, #fff);
+  box-shadow: 0 0 0 4px var(--poke-yellow), 4px 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+.meus-pokemons-opcao img {
+  width: 100%;
+  max-width: 140px;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.meus-pokemons-opcao-nome {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.meus-pokemons-opcao-tipo {
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45);
+  background: var(--meus-pokemons-cor);
+  border: 2px solid var(--poke-ink);
+  border-radius: 999px;
+}
+
+/* Barra de confirmação que aparece depois de escolher */
+.meus-pokemons-confirmar {
+  position: sticky;
+  bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--poke-navy);
+  border: 3px solid var(--poke-ink);
+  border-radius: 16px;
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.3);
+}
+
+.meus-pokemons-botao {
+  padding: 10px 22px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--dex-red);
+  border: 3px solid var(--poke-ink);
+  border-radius: 999px;
+  box-shadow: 0 4px 0 var(--poke-ink);
+  cursor: pointer;
+}
+
+.meus-pokemons-botao:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--poke-ink);
+}
+
+/* Grade com os Pokémon do usuário */
+.meus-pokemons-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 24px;
+  align-items: start;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.meus-pokemons-card-carregando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 420px;
+  font-size: 14px;
+  color: #777;
+  background: #fff;
+  border: 3px dashed #c4c4c4;
+  border-radius: 16px;
+}
+
+@media (max-width: 480px) {
+  .meus-pokemons-opcoes {
+    gap: 8px;
+  }
+
+  .meus-pokemons-opcao-nome {
+    font-size: 13px;
+  }
+}
+
+.meus-pokemons-opcao:focus-visible,
+.meus-pokemons-botao:focus-visible {
+  outline: 3px solid var(--poke-blue);
+  outline-offset: 2px;
+}
+
+.meus-pokemons-todos:focus-visible,
+.meus-pokemons-sair:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}

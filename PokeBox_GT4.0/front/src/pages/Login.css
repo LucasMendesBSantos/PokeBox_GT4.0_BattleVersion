@@ -1,0 +1,362 @@
+.login-page {
+  --poke-red: #e3350d;
+  --poke-red-dark: #b52a0a;
+  --poke-yellow: #ffcb05;
+  --poke-blue: #3d7dca;
+  --poke-navy: #003a70;
+  --poke-ink: #1d1d1f;
+  --dex-red: #dc1030;
+  --dex-lens: #2a95e0;
+
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  /* Pixel art animada; a posição mantém o Pikachu visível em telas estreitas */
+  background: #0b2a5b url('/login-bg.gif') 72% center / cover no-repeat;
+  image-rendering: pixelated;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Os comentarios aqui são apenas para identificar as áreas do design da tela, professor, por favor, não colocar meu github no 
+humilhador só por conta dos comentarios */
+
+/* Corpo vermelho com borda preta */
+.pokedex-corpo {
+  width: 100%;
+  max-width: 420px;
+  padding: 0 16px 16px;
+  background: var(--dex-red);
+  border: 3px solid var(--poke-ink);
+  border-radius: 12px;
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+}
+
+/* Topo da Pokédex (área da lente, luzes e linha) */
+.pokedex-topo {
+  position: relative;
+  height: 104px;
+  margin: 0 -16px;
+}
+
+/* Lente azul com aro branco */
+.pokedex-lente {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 58px;
+  height: 58px;
+  background:
+    radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.85) 0 12%, transparent 13%),
+    var(--dex-lens);
+  border: 6px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--poke-ink);
+}
+
+/* As 3 luzinhas (vermelha, amarela e verde) */
+.pokedex-luzes {
+  position: absolute;
+  top: 18px;
+  left: 94px;
+  display: flex;
+  gap: 6px;
+}
+
+.pokedex-luz {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--poke-ink);
+  border-radius: 50%;
+}
+
+.pokedex-luz--vermelha { background: #f03a3a; }
+.pokedex-luz--amarela { background: #f5d33b; }
+.pokedex-luz--verde { background: #3aaa5f; }
+
+/* Linha dupla com degrau na diagonal */
+.pokedex-linha-degrau {
+  position: absolute;
+  left: 0;
+  bottom: 8px;
+  width: 100%;
+  height: 40px;
+  overflow: visible;
+}
+
+.pokedex-linha-degrau polyline {
+  fill: none;
+  stroke: var(--poke-ink);
+  stroke-width: 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.pokedex-linha-degrau polyline.fina {
+  stroke-width: 1.5;
+}
+
+/* Tela branca com o canto de baixo cortado */
+.pokedex-tela-borda {
+  padding: 2px;
+  background: var(--poke-ink);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 44px 100%, 0 calc(100% - 44px));
+}
+
+.pokedex-tela {
+  position: relative;
+  padding: 24px 24px 44px;
+  background: #fafafa;
+  text-align: center;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 43px 100%, 0 calc(100% - 43px));
+}
+
+/* Linhas pontilhadas */
+.pokedex-pontilhado {
+  height: 0;
+  margin: 20px 0;
+  border: none;
+  border-top: 4px dotted var(--poke-ink);
+}
+
+/* Setinha ▼ no rodapé */
+.pokedex-seta {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 10px solid transparent;
+  border-top: 14px solid var(--poke-ink);
+  border-bottom: none;
+}
+
+/* Pokébola desenhada em CSS */
+.login-pokeball {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 12px;
+  border: 4px solid var(--poke-ink);
+  border-radius: 50%;
+  background: linear-gradient(
+    to bottom,
+    var(--poke-red) 0 46%,
+    var(--poke-ink) 46% 54%,
+    #fff 54% 100%
+  );
+  box-sizing: border-box;
+  animation: login-wobble 3s ease-in-out infinite;
+}
+
+.login-pokeball-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 4px solid var(--poke-ink);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 5px #d0d0d0;
+}
+
+@keyframes login-wobble {
+  0%, 70%, 100% { transform: rotate(0); }
+  75% { transform: rotate(-14deg); }
+  82% { transform: rotate(12deg); }
+  89% { transform: rotate(-6deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-pokeball { animation: none; }
+}
+
+.login-title {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: var(--poke-yellow);
+  -webkit-text-stroke: 2px var(--poke-navy);
+  paint-order: stroke fill;
+  text-shadow: 3px 3px 0 var(--poke-navy);
+}
+
+.login-subtitle {
+  margin: 8px 0 0;
+  font-size: 15px;
+  color: #555;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-field > span {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--poke-navy);
+}
+
+.login-field input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 16px;
+  color: var(--poke-ink);
+  background: #f7f7f7;
+  border: 3px solid var(--poke-ink);
+  border-radius: 12px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.login-field input:focus {
+  background: #fff;
+  border-color: var(--poke-blue);
+  box-shadow: 0 0 0 4px rgba(255, 203, 5, 0.6);
+}
+
+.login-password {
+  position: relative;
+}
+
+.login-password input {
+  padding-right: 84px;
+}
+
+.login-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--poke-blue);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.login-toggle:hover {
+  background: rgba(61, 125, 202, 0.1);
+}
+
+/* Link "Esqueci minha senha." logo abaixo da senha */
+.login-forgot {
+  align-self: flex-end;
+  margin-top: -8px;
+  padding: 2px 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--poke-blue);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.login-forgot:hover {
+  text-decoration: underline;
+}
+
+.login-error {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--poke-red-dark);
+  background: #fdecea;
+  border: 2px solid var(--poke-red);
+  border-radius: 10px;
+}
+
+.login-submit {
+  margin-top: 8px;
+  padding: 14px;
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--poke-red);
+  border: 3px solid var(--poke-ink);
+  border-radius: 999px;
+  box-shadow: 0 5px 0 var(--poke-ink);
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s, background 0.2s;
+}
+
+.login-submit:hover {
+  background: var(--poke-red-dark);
+}
+
+.login-submit:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 var(--poke-ink);
+}
+
+.login-submit:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.login-register {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.login-register p {
+  margin: 0;
+  font-size: 14px;
+  color: #555;
+}
+
+.login-register-button {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--poke-navy);
+  background: var(--poke-yellow);
+  border: 3px solid var(--poke-ink);
+  border-radius: 999px;
+  box-shadow: 0 5px 0 var(--poke-ink);
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s, background 0.2s;
+}
+
+.login-register-button:hover {
+  background: #ffd83d;
+}
+
+.login-register-button:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 var(--poke-ink);
+}
+
+.login-submit:focus-visible,
+.login-toggle:focus-visible,
+.login-forgot:focus-visible {
+  outline: 3px solid var(--poke-yellow);
+  outline-offset: 2px;
+}
+
+.login-register-button:focus-visible {
+  outline: 3px solid var(--poke-blue);
+  outline-offset: 2px;
+}
