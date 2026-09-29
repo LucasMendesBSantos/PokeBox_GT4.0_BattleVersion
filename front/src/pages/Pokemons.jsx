@@ -4,7 +4,6 @@ import {
   useRef,
   useState,
 } from 'react';
-import PropTypes from 'prop-types';
 import FiltrosPokemons from '../components/FiltrosPokemons';
 import PokemonCard from '../components/PokemonCard';
 import { buscarFiltro, buscarPokemon, listarPokemons } from '../services/pokeapi';
@@ -34,7 +33,7 @@ function aplicarFiltros(pokemons, conjuntos) {
 
 const chaveFiltro = (recurso, nome) => `${recurso}/${nome}`;
 
-function Pokemons({ usuario, onMeusPokemons, onSair }) {
+function Pokemons() {
   const [lista, setLista] = useState(null);
   const [erroLista, setErroLista] = useState(null);
   const [tentativa, setTentativa] = useState(0);
@@ -259,40 +258,7 @@ function Pokemons({ usuario, onMeusPokemons, onSair }) {
     );
   };
 
-  return (
-    <div className="pokemons-page">
-      <header className="pokemons-topo">
-        <div className="pokemons-topo-conteudo">
-          <div className="pokemons-marca">
-            <span className="pokemons-lente" aria-hidden="true" />
-            <h1 className="pokemons-titulo">PokeBox</h1>
-          </div>
-
-          <div className="pokemons-usuario">
-            <span>{`Olá, ${usuario.login}!`}</span>
-            <button type="button" className="pokemons-meus" onClick={() => onMeusPokemons()}>
-              Meus Pokémon
-            </button>
-            <button type="button" className="pokemons-sair" onClick={() => onSair()}>
-              Sair
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="pokemons-conteudo">
-        {renderConteudo()}
-      </main>
-    </div>
-  );
+  return renderConteudo();
 }
-
-Pokemons.propTypes = {
-  usuario: PropTypes.shape({
-    login: PropTypes.string.isRequired,
-  }).isRequired,
-  onMeusPokemons: PropTypes.func.isRequired,
-  onSair: PropTypes.func.isRequired,
-};
 
 export default Pokemons;

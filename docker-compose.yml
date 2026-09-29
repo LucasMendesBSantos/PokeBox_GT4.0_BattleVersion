@@ -1,0 +1,44 @@
+# Sobe o jogo inteiro: docker compose up --build
+# Banco em localhost:5432, back em localhost:8080, front em localhost:5174
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pokebox
+      POSTGRES_PASSWORD: pokebox
+      POSTGRES_DB: pokebox
+    ports:
+      - "5432:5432"
+    volumes:
+      # Roda o db.sql só na primeira vez (quando o volume está vazio)
+      - ./db/db.sql:/docker-entrypoint-initdb.d/01-db.sql:ro
+      - dados:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pokebox -d pokebox"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  back:
+    build: ./back
+    environment:
+      DATABASE_URL: postgres://pokebox:pokebox@db:5432/pokebox
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  front:
+    build: ./front
+    environment:
+      # O navegador acessa o back pela máquina host, não pela rede interna do Docker
+      VITE_BACK_URL: http://localhost:8080
+    ports:
+      - "5174:5174"
+    depends_on:
+      - back
+
+volumes:
+  dados:

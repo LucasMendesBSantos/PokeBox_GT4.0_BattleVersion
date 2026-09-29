@@ -9,8 +9,9 @@ function Login({ onLogin, onCadastro, onEsqueciSenha }) {
   const [senha, setSenha] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [erro, setErro] = useState(null);
+  const [entrando, setEntrando] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!login.trim() || !senha) {
@@ -19,7 +20,13 @@ function Login({ onLogin, onCadastro, onEsqueciSenha }) {
     }
 
     setErro(null);
-    onLogin({ login: login.trim(), senha });
+    setEntrando(true);
+    try {
+      await onLogin({ login: login.trim(), senha });
+    } catch (falha) {
+      setErro(falha.message);
+      setEntrando(false);
+    }
   };
 
   return (
@@ -105,8 +112,8 @@ function Login({ onLogin, onCadastro, onEsqueciSenha }) {
                 </p>
               )}
 
-              <button type="submit" className="login-submit">
-                Eu escolho você!
+              <button type="submit" className="login-submit" disabled={entrando}>
+                {entrando ? 'Entrando...' : 'Eu escolho você!'}
               </button>
             </form>
 

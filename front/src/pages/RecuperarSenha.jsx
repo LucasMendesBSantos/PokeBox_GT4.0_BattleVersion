@@ -85,7 +85,7 @@ function RecuperarSenha({ onVerificar, onRedefinir, onVoltar }) {
     }
   };
 
-  const handleRedefinir = (e) => {
+  const handleRedefinir = async (e) => {
     e.preventDefault();
 
     if (!senha || !confirmarSenha) {
@@ -99,7 +99,13 @@ function RecuperarSenha({ onVerificar, onRedefinir, onVoltar }) {
     }
 
     setErro(null);
-    onRedefinir({ ...dadosUsuario(), senha });
+    setVerificando(true);
+    try {
+      await onRedefinir({ ...dadosUsuario(), senha });
+    } catch (falha) {
+      setErro(falha.message);
+      setVerificando(false);
+    }
   };
 
   const handleTrocarUsuario = () => {
@@ -226,8 +232,8 @@ function RecuperarSenha({ onVerificar, onRedefinir, onVoltar }) {
                   </p>
                 )}
 
-                <button type="submit" className="recuperar-submit">
-                  Redefinir senha
+                <button type="submit" className="recuperar-submit" disabled={verificando}>
+                  {verificando ? 'Salvando...' : 'Redefinir senha'}
                 </button>
 
                 <button type="button" className="recuperar-link" onClick={handleTrocarUsuario}>

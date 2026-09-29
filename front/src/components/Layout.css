@@ -1,0 +1,225 @@
+.layout-page {
+  --poke-yellow: #ffcb05;
+  --poke-blue: #3d7dca;
+  --poke-navy: #003a70;
+  --poke-ink: #1d1d1f;
+  --dex-red: #dc1030;
+  --dex-lens: #2a95e0;
+
+  min-height: 100svh;
+  background:
+    radial-gradient(circle, rgba(0, 58, 112, 0.08) 1.5px, transparent 1.5px) 0 0 / 18px 18px,
+    #f2f4f8;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  color: var(--poke-ink);
+}
+
+/* Barra vermelha no topo, no estilo da Pokédex */
+.layout-topo {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--dex-red);
+  border-bottom: 4px solid var(--poke-ink);
+}
+
+.layout-topo-conteudo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 10px 16px;
+}
+
+.layout-marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.layout-lente {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  background:
+    radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.85) 0 12%, transparent 13%),
+    var(--dex-lens);
+  border: 4px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--poke-ink);
+}
+
+.layout-titulo {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: var(--poke-yellow);
+  -webkit-text-stroke: 2px var(--poke-navy);
+  paint-order: stroke fill;
+  text-shadow: 2px 2px 0 var(--poke-navy);
+}
+
+/* Menu */
+.layout-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.layout-menu-item,
+.layout-sair {
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--poke-navy);
+  background: #fff;
+  border: 2px solid var(--poke-ink);
+  border-radius: 999px;
+  box-shadow: 0 3px 0 var(--poke-ink);
+  cursor: pointer;
+}
+
+.layout-menu-item[aria-current='page'],
+.layout-sair {
+  background: var(--poke-yellow);
+}
+
+.layout-menu-item:active,
+.layout-sair:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--poke-ink);
+}
+
+.layout-menu-item:focus-visible,
+.layout-sair:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+.layout-usuario {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.layout-moedas {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 4px 6px;
+  font-variant-numeric: tabular-nums;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 999px;
+}
+
+.layout-moeda {
+  width: 18px;
+  height: 18px;
+  background: radial-gradient(circle at 35% 35%, #fff6b0, var(--poke-yellow) 45%, #c99a00);
+  border: 2px solid var(--poke-ink);
+  border-radius: 50%;
+}
+
+.layout-conteudo {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+/* Peças usadas pelas telas do jogo (loja, time, batalhas) */
+.jogo-titulo {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--poke-navy);
+}
+
+.jogo-texto {
+  margin: 6px 0 24px;
+  font-size: 16px;
+  color: #555;
+}
+
+.jogo-botao {
+  padding: 10px 22px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--dex-red);
+  border: 3px solid var(--poke-ink);
+  border-radius: 999px;
+  box-shadow: 0 4px 0 var(--poke-ink);
+  cursor: pointer;
+}
+
+.jogo-botao--claro {
+  color: var(--poke-navy);
+  background: #fff;
+}
+
+.jogo-botao--azul {
+  background: var(--poke-blue);
+}
+
+.jogo-botao:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--poke-ink);
+}
+
+.jogo-botao:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.jogo-botao:focus-visible {
+  outline: 3px solid var(--poke-blue);
+  outline-offset: 2px;
+}
+
+.jogo-erro {
+  margin: 12px 0;
+  padding: 10px 14px;
+  font-weight: 700;
+  color: #8a0c20;
+  background: #ffe3e7;
+  border: 2px solid #dc1030;
+  border-radius: 12px;
+}
+
+.jogo-aviso {
+  margin: 12px 0;
+  padding: 10px 14px;
+  font-weight: 700;
+  color: var(--poke-navy);
+  background: #fff6c8;
+  border: 2px solid #c99a00;
+  border-radius: 12px;
+}
+
+.jogo-painel {
+  padding: 16px;
+  background: #fff;
+  border: 3px solid var(--poke-ink);
+  border-radius: 16px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 720px) {
+  .layout-titulo {
+    font-size: 22px;
+  }
+
+  .layout-menu {
+    order: 3;
+    width: 100%;
+  }
+}

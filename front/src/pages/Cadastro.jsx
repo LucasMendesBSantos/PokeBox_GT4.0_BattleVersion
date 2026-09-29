@@ -50,6 +50,7 @@ function Cadastro({ onCadastrar, onVoltar }) {
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [erro, setErro] = useState(null);
+  const [enviando, setEnviando] = useState(false);
 
   const validar = () => {
     if (!login.trim() || !celular || !senha || !confirmarSenha) {
@@ -60,7 +61,7 @@ function Cadastro({ onCadastrar, onVoltar }) {
       ?? validarNovaSenha(senha, confirmarSenha);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const mensagem = validar();
@@ -70,7 +71,13 @@ function Cadastro({ onCadastrar, onVoltar }) {
     }
 
     setErro(null);
-    onCadastrar({ login: login.trim(), celular: somenteDigitos(celular), senha });
+    setEnviando(true);
+    try {
+      await onCadastrar({ login: login.trim(), celular: somenteDigitos(celular), senha });
+    } catch (falha) {
+      setErro(falha.message);
+      setEnviando(false);
+    }
   };
 
   return (
@@ -177,8 +184,8 @@ function Cadastro({ onCadastrar, onVoltar }) {
                 </p>
               )}
 
-              <button type="submit" className="cadastro-submit">
-                Começar minha jornada!
+              <button type="submit" className="cadastro-submit" disabled={enviando}>
+                {enviando ? 'Cadastrando...' : 'Começar minha jornada!'}
               </button>
             </form>
 

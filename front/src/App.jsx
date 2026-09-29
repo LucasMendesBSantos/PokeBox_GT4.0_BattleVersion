@@ -1,90 +1,185 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import Layout from './components/Layout';
 import Login from './pages/Login';
 import Cadastro from './pages/Cadastro';
 import RecuperarSenha from './pages/RecuperarSenha';
 import Pokemons from './pages/Pokemons';
 import MeusPokemons from './pages/MeusPokemons';
+import Loja from './pages/Loja';
+import Time from './pages/Time';
+import Batalhas from './pages/Batalhas';
+import Batalha from './pages/Batalha';
+import * as api from './services/api';
+
+const TAMANHO_TIME = 5;
 
 function App() {
   const [tela, setTela] = useState('login');
+  // { id, login, pokecoins, pokemons } ou null se não está logado
   const [usuario, setUsuario] = useState(null);
+  // Enquanto confere se o token salvo ainda vale, não mostra o login para não "piscar"
+  const [conferindoSessao, setConferindoSessao] = useState(api.temSessao);
+  const [batalhaId, setBatalhaId] = useState(null);
 
-  const handleLogin = (credenciais) => {
-    // TODO: integrar com o endpoint de autenticação do back.
-    // Enquanto o endpoint não existe, qualquer login entra e começa sem Pokémon.
-    setUsuario({ login: credenciais.login, box: [] });
-    setTela('pokemons');
+  // Busca saldo e coleção de novo (depois de comprar, evoluir, batalhar...)
+  const recarregarUsuario = useCallback(async () => {
+    try {
+      const { usuario: dados, pokemons } = await api.buscarEu();
+      setUsuario({ ...dados, pokemons });
+      return pokemons;
+    } catch (erro) {
+      // Sessão expirou ou a senha foi trocada em outro lugar
+      if (erro.status === 401) {
+        setUsuario(null);
+        setTela('login');
+      }
+      throw erro;
+    }
+  }, []);
+
+  // Recarrega sem deixar o erro escapar (usado em atualizações de fundo)
+  const atualizarUsuario = useCallback(() => {
+    recarregarUsuario().catch(() => {});
+  }, [recarregarUsuario]);
+
+  // Login salvo de uma visita anterior
+  useEffect(() => {
+    if (!api.temSessao()) return;
+    // Se o token não vale mais, o api.js o apaga e o usuário cai no login
+    api.buscarEu()
+      .then(({ usuario: dados, pokemons }) => {
+        setUsuario({ ...dados, pokemons });
+        setTela(pokemons.length === 0 ? 'meusPokemons' : 'batalhas');
+      }, () => {})
+      .finally(() => setConferindoSessao(false));
+  }, []);
+
+  const entrarNoJogo = async () => {
+    const pokemons = await recarregarUsuario();
+    // Quem ainda não tem Pokémon cai direto na escolha do inicial
+    setTela(pokemons.length === 0 ? 'meusPokemons' : 'batalhas');
   };
 
-  const handleEscolherInicial = (id) => {
-    // TODO: salvar o Pokémon inicial no back
-    setUsuario((atual) => ({ ...atual, box: [id] }));
+  const handleLogin = async ({ login, senha }) => {
+    await api.entrar(login, senha);
+    await entrarNoJogo();
   };
 
-  const handleSair = () => {
+  const handleCadastrar = async (dados) => {
+    await api.cadastrar(dados);
+    await entrarNoJogo();
+  };
+
+  const handleRedefinirSenha = async (dados) => {
+    await api.redefinirSenha(dados);
+    setTela('login');
+  };
+
+  const handleSair = async () => {
+    await api.sair().catch(() => {});
     setUsuario(null);
     setTela('login');
   };
 
-  const handleCadastrar = (dados) => {
-    // TODO: integrar com o endpoint de cadastro do back
-    console.log('Cadastro:', dados.login, dados.celular);
+  const handleNavegar = (destino) => {
+    setTela(destino);
+    atualizarUsuario();
   };
 
-  const handleVerificarUsuario = async (dados) => {
-    // TODO: perguntar ao back se existe um usuário com esse login e celular.
-    // Enquanto o endpoint não existe, qualquer combinação é aceita.
-    console.log('Verificar usuário:', dados.login, dados.celular);
-    return true;
+  const handleAbrirBatalha = (id) => {
+    setBatalhaId(id);
+    setTela('batalha');
   };
 
-  const handleRedefinirSenha = (dados) => {
-    // TODO: integrar com o endpoint de redefinição de senha do back
-    console.log('Redefinir senha:', dados.login);
-    setTela('login');
-  };
+  if (conferindoSessao) return null;
 
-  if (usuario && tela === 'meusPokemons') {
+  if (!usuario) {
+    if (tela === 'cadastro') {
+      return <Cadastro onCadastrar={handleCadastrar} onVoltar={() => setTela('login')} />;
+    }
+    if (tela === 'recuperarSenha') {
+      return (
+        <RecuperarSenha
+          onVerificar={api.verificarUsuario}
+          onRedefinir={handleRedefinirSenha}
+          onVoltar={() => setTela('login')}
+        />
+      );
+    }
     return (
+      <Login
+        onLogin={handleLogin}
+        onCadastro={() => setTela('cadastro')}
+        onEsqueciSenha={() => setTela('recuperarSenha')}
+      />
+    );
+  }
+
+  const telas = {
+    pokemons: () => <Pokemons />,
+    meusPokemons: () => (
       <MeusPokemons
         usuario={usuario}
-        onEscolherInicial={handleEscolherInicial}
-        onTodosPokemons={() => setTela('pokemons')}
-        onSair={handleSair}
+        onEscolherInicial={async (especieId) => {
+          await api.escolherInicial(especieId);
+          await recarregarUsuario();
+        }}
+        onEvoluir={async (pokemonId, especieId) => {
+          const evoluido = await api.evoluir(pokemonId, especieId);
+          await recarregarUsuario();
+          return evoluido;
+        }}
       />
-    );
-  }
-
-  if (usuario) {
-    return (
-      <Pokemons
+    ),
+    loja: () => (
+      <Loja
         usuario={usuario}
-        onMeusPokemons={() => setTela('meusPokemons')}
-        onSair={handleSair}
+        onComprar={async () => {
+          const compra = await api.comprarPokemon();
+          await recarregarUsuario();
+          return compra;
+        }}
       />
-    );
-  }
-
-  if (tela === 'cadastro') {
-    return <Cadastro onCadastrar={handleCadastrar} onVoltar={() => setTela('login')} />;
-  }
-
-  if (tela === 'recuperarSenha') {
-    return (
-      <RecuperarSenha
-        onVerificar={handleVerificarUsuario}
-        onRedefinir={handleRedefinirSenha}
-        onVoltar={() => setTela('login')}
+    ),
+    time: () => (
+      <Time
+        // key: remonta com a seleção salva quando a coleção muda (ex.: depois de salvar)
+        key={usuario.pokemons.map((p) => `${p.id}:${p.posicaoTime}`).join()}
+        usuario={usuario}
+        onSalvar={async (ids) => {
+          await api.salvarTime(ids);
+          await recarregarUsuario();
+        }}
+        onIrParaLoja={() => handleNavegar('loja')}
       />
-    );
-  }
+    ),
+    batalhas: () => (
+      <Batalhas
+        temTime={usuario.pokemons.filter((p) => p.posicaoTime).length === TAMANHO_TIME}
+        onAbrir={handleAbrirBatalha}
+        onAtualizarUsuario={atualizarUsuario}
+      />
+    ),
+    batalha: () => (
+      <Batalha
+        key={batalhaId}
+        batalhaId={batalhaId}
+        onVoltar={() => handleNavegar('batalhas')}
+        onAtualizarUsuario={atualizarUsuario}
+      />
+    ),
+  };
+  const renderTela = telas[tela] ?? telas.batalhas;
 
   return (
-    <Login
-      onLogin={handleLogin}
-      onCadastro={() => setTela('cadastro')}
-      onEsqueciSenha={() => setTela('recuperarSenha')}
-    />
+    <Layout
+      usuario={usuario}
+      telaAtual={tela === 'batalha' ? 'batalhas' : tela}
+      onNavegar={handleNavegar}
+      onSair={handleSair}
+    >
+      {renderTela()}
+    </Layout>
   );
 }
 

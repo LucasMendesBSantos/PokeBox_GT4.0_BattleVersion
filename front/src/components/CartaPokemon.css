@@ -1,0 +1,246 @@
+.carta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--carta-cor) 14%, #fff);
+  border: 3px solid var(--poke-ink, #1d1d1f);
+  border-radius: 18px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Shiny ganha borda dourada e um brilho que atravessa o card */
+.carta--shiny {
+  position: relative;
+  overflow: hidden;
+  border-color: #c99a00;
+  box-shadow: 0 0 0 3px #ffcb05, 4px 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+.carta--shiny::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.55) 50%, transparent 60%);
+  transform: translateX(-100%);
+  animation: carta-brilho 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes carta-brilho {
+  60%,
+  100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carta--shiny::after { animation: none; }
+}
+
+.carta-topo {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+
+.carta-mint {
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #555;
+}
+
+.carta-nome {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--poke-navy, #003a70);
+  overflow-wrap: anywhere;
+}
+
+.carta-selos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  grid-column: 1 / -1;
+}
+
+.carta-selo {
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--poke-navy, #003a70);
+  background: #fff;
+  border: 2px solid var(--poke-ink, #1d1d1f);
+  border-radius: 999px;
+}
+
+.carta-selo--shiny {
+  background: #ffcb05;
+}
+
+.carta-selo--raro {
+  color: #fff;
+  background: #6f35fc;
+}
+
+.carta-imagem {
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.7);
+  border: 2px solid var(--poke-ink, #1d1d1f);
+  border-radius: 12px;
+}
+
+.carta-imagem img {
+  width: 100%;
+  max-width: 180px;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.carta--compacta .carta-imagem img {
+  max-width: 110px;
+}
+
+.carta-tipos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carta-tipos li {
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45);
+  border: 2px solid var(--poke-ink, #1d1d1f);
+  border-radius: 999px;
+}
+
+.carta-nivel {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.carta-xp-texto {
+  font-size: 12px;
+  font-weight: 700;
+  color: #555;
+  font-variant-numeric: tabular-nums;
+}
+
+.carta-xp {
+  grid-column: 1 / -1;
+  height: 10px;
+  overflow: hidden;
+  background: #fff;
+  border: 2px solid var(--poke-ink, #1d1d1f);
+  border-radius: 999px;
+}
+
+.carta-xp span {
+  display: block;
+  height: 100%;
+  background: var(--poke-blue, #3d7dca);
+}
+
+.carta-status,
+.carta-medidas {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.carta-status div,
+.carta-medidas div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.carta-status dt,
+.carta-medidas dt {
+  font-weight: 700;
+  color: #555;
+}
+
+.carta-status dd,
+.carta-medidas dd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.carta-medidas {
+  grid-template-columns: 1fr 1fr;
+  column-gap: 20px;
+  padding-top: 8px;
+  border-top: 2px dashed rgba(0, 0, 0, 0.15);
+}
+
+.carta-iv {
+  min-width: 44px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  color: #555;
+  background: #fff;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+}
+
+.carta-iv--alto {
+  color: #6b4f00;
+  background: #ffe680;
+  border-color: #c99a00;
+}
+
+.carta-evolucoes {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carta-evolucao-futura {
+  font-size: 13px;
+  color: #555;
+}
+
+.carta-evoluir {
+  width: 100%;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--poke-navy, #003a70);
+  background: #ffcb05;
+  border: 3px solid var(--poke-ink, #1d1d1f);
+  border-radius: 999px;
+  box-shadow: 0 3px 0 var(--poke-ink, #1d1d1f);
+  cursor: pointer;
+}
+
+.carta-evoluir:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.carta-evoluir:focus-visible {
+  outline: 3px solid var(--poke-blue, #3d7dca);
+  outline-offset: 2px;
+}

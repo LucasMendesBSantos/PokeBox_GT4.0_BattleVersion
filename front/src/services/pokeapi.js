@@ -62,8 +62,8 @@ export async function listarPokemons() {
 }
 
 // Arte oficial pelo número, sem precisar buscar o Pokémon inteiro
-export function urlArtwork(id) {
-  return `${ARTWORK_URL}/${id}.png`;
+export function urlArtwork(id, shiny = false) {
+  return shiny ? `${ARTWORK_URL}/shiny/${id}.png` : `${ARTWORK_URL}/${id}.png`;
 }
 
 // Dados completos de um Pokémon (/pokemon/{id})

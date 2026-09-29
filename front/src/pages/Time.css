@@ -1,0 +1,132 @@
+.time-slots {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.time-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 170px;
+  padding: 10px 8px;
+  background: #fff;
+  border: 3px solid var(--poke-ink);
+  border-radius: 16px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.15);
+}
+
+.time-slot[data-vazio='true'] {
+  justify-content: center;
+  background: transparent;
+  border-style: dashed;
+  border-color: #aaa;
+  box-shadow: none;
+}
+
+.time-slot-numero {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--poke-navy);
+}
+
+.time-slot img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+.time-slot-nome {
+  font-size: 14px;
+  font-weight: 900;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.time-slot-nivel {
+  font-size: 12px;
+  font-weight: 700;
+  color: #555;
+}
+
+.time-slot-vazio {
+  font-weight: 700;
+  color: #888;
+}
+
+.time-slot-acoes {
+  display: flex;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.time-slot-acoes button {
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+  color: var(--poke-navy);
+  background: #fff;
+  border: 2px solid var(--poke-ink);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.time-slot-acoes button:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.time-slot-acoes button:focus-visible {
+  outline: 3px solid var(--poke-blue);
+  outline-offset: 1px;
+}
+
+.time-salvar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 8px;
+  font-weight: 700;
+  color: #555;
+}
+
+.time-subtitulo {
+  margin: 28px 0 12px;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--poke-navy);
+}
+
+.time-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Card que já está no time ganha contorno azul */
+.time-opcao[data-no-time='true'] .carta {
+  box-shadow: 0 0 0 4px var(--poke-blue), 4px 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+.time-escolher {
+  padding: 6px 12px;
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .time-slots {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}
