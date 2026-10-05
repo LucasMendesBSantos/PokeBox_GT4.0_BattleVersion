@@ -1,0 +1,25 @@
+.coracoes {
+  display: inline-flex;
+  gap: 1px;
+  font-size: 16px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.coracoes[data-tamanho='pequeno'] {
+  font-size: 12px;
+}
+
+.coracoes[data-tamanho='grande'] {
+  gap: 3px;
+  font-size: 26px;
+}
+
+.coracao {
+  color: #f3c4d2;
+}
+
+.coracao--cheio {
+  color: #ef3f74;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+}

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { tempoRestante } from '../components/tempo';
+import { tempoDesde, tempoRestante } from '../components/tempo';
+import { formatarNome } from '../components/tipos';
+import { urlArtwork } from '../services/pokeapi';
 import * as api from '../services/api';
 import './Batalhas.css';
 
@@ -15,8 +17,20 @@ function resumoEncerrada(batalha) {
   return `${batalha.venci ? 'Vitória' : 'Derrota'} ${MOTIVOS[batalha.motivoFim]}`;
 }
 
+// Por que um treinador ativo não pode ser desafiado agora (null = pode)
+function bloqueioDesafio(treinador) {
+  if (treinador.emBatalha) return 'Em batalha com você';
+  if (treinador.desafioEnviado) return 'Desafio enviado';
+  if (treinador.desafioRecebido) return 'Desafiou você';
+  return null;
+}
+
+// Busca as batalhas e os treinadores ativos juntos (as duas listas mudam com as mesmas ações)
+const buscarTudo = () => Promise.all([api.listarBatalhas(), api.listarTreinadoresAtivos()]);
+
 function Batalhas({ temTime, onAbrir, onAtualizarUsuario }) {
   const [batalhas, setBatalhas] = useState(null);
+  const [ativos, setAtivos] = useState([]);
   const [erro, setErro] = useState(null);
   const [oponente, setOponente] = useState('');
   const [sugestoes, setSugestoes] = useState([]);
@@ -26,7 +40,9 @@ function Batalhas({ temTime, onAbrir, onAtualizarUsuario }) {
   // Recarrega depois de desafiar/responder
   const carregar = async () => {
     try {
-      setBatalhas(await api.listarBatalhas());
+      const [lista, treinadores] = await buscarTudo();
+      setBatalhas(lista);
+      setAtivos(treinadores);
     } catch (e) {
       setErro(e.message);
     }
@@ -34,9 +50,11 @@ function Batalhas({ temTime, onAbrir, onAtualizarUsuario }) {
 
   useEffect(() => {
     let ativo = true;
-    const buscar = () => api.listarBatalhas().then(
-      (lista) => {
-        if (ativo) setBatalhas(lista);
+    const buscar = () => buscarTudo().then(
+      ([lista, treinadores]) => {
+        if (!ativo) return;
+        setBatalhas(lista);
+        setAtivos(treinadores);
       },
       (e) => {
         if (ativo) setErro(e.message);
@@ -81,14 +99,15 @@ function Batalhas({ temTime, onAbrir, onAtualizarUsuario }) {
     }
   };
 
+  const desafiar = (nome) => executar(async () => {
+    await api.desafiar(nome);
+    setOponente('');
+  }, `Desafio enviado para ${nome}! O convite fica aberto por 24h.`);
+
   const handleDesafiar = (e) => {
     e.preventDefault();
     const nome = oponente.trim();
-    if (!nome) return;
-    executar(async () => {
-      await api.desafiar(nome);
-      setOponente('');
-    }, `Desafio enviado para ${nome}! O convite fica aberto por 24h.`);
+    if (nome) desafiar(nome);
   };
 
   const handleResponder = (batalha, aceitar) => executar(async () => {
@@ -105,6 +124,10 @@ function Batalhas({ temTime, onAbrir, onAtualizarUsuario }) {
   const recebidos = batalhas.filter((b) => b.status === 'aguardando' && !b.souDesafiante);
   const enviados = batalhas.filter((b) => b.status === 'aguardando' && b.souDesafiante);
   const encerradas = batalhas.filter((b) => !['aguardando', 'em_andamento'].includes(b.status));
+
+  // O texto digitado no campo também filtra a lista de treinadores ativos
+  const termo = oponente.trim().toLowerCase();
+  const ativosFiltrados = termo ? ativos.filter((t) => t.login.toLowerCase().includes(termo)) : ativos;
 
   const secao = (titulo, lista, renderItem) => lista.length > 0 && (
     <section className="batalhas-secao">
@@ -128,7 +151,7 @@ function Batalhas({ temTime, onAbrir, onAtualizarUsuario }) {
       </p>
 
       <form className="batalhas-desafiar jogo-painel" onSubmit={handleDesafiar}>
-        <label htmlFor="batalhas-oponente">Desafiar um treinador</label>
+        <label htmlFor="batalhas-oponente">Procurar treinador</label>
         <div className="batalhas-desafiar-linha">
           <input
             id="batalhas-oponente"
@@ -151,6 +174,53 @@ function Batalhas({ temTime, onAbrir, onAtualizarUsuario }) {
 
       {erro && <p className="jogo-erro" role="alert">{erro}</p>}
       {aviso && <p className="jogo-aviso" role="status">{aviso}</p>}
+
+      <section className="batalhas-secao" aria-labelledby="batalhas-ativos-titulo">
+        <h2 id="batalhas-ativos-titulo">
+          {`Treinadores ativos nas últimas 24h (${ativosFiltrados.length})`}
+        </h2>
+        {ativosFiltrados.length === 0 ? (
+          <p className="batalhas-dica">
+            {termo
+              ? `Nenhum treinador ativo com "${oponente.trim()}". Você ainda pode desafiar pelo login exato no campo acima.`
+              : 'Ninguém com time completo entrou no jogo nas últimas 24h.'}
+          </p>
+        ) : (
+          <ul className="batalhas-ativos">
+            {ativosFiltrados.map((treinador) => {
+              const bloqueio = bloqueioDesafio(treinador);
+              return (
+                <li key={treinador.login} className="batalhas-ativo">
+                  <div className="batalhas-ativo-info">
+                    <strong>{treinador.login}</strong>
+                    <span>{`Visto ${tempoDesde(treinador.ultimoAcessoEm)} · nível médio ${treinador.nivelMedio}`}</span>
+                  </div>
+                  <ul className="batalhas-ativo-time" aria-label={`Time de ${treinador.login}`}>
+                    {treinador.time.map((pokemon, i) => (
+                      // Posição na chave: o time pode ter duas vezes a mesma espécie
+                      <li key={`${i}-${pokemon.especieId}`} title={`${formatarNome(pokemon.nome)} · Nv. ${pokemon.nivel}${pokemon.shiny ? ' · shiny' : ''}`}>
+                        <img src={urlArtwork(pokemon.especieId, pokemon.shiny)} alt={formatarNome(pokemon.nome)} loading="lazy" />
+                      </li>
+                    ))}
+                  </ul>
+                  {bloqueio ? (
+                    <span className="batalhas-ativo-status">{bloqueio}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="jogo-botao"
+                      disabled={enviando || !temTime}
+                      onClick={() => desafiar(treinador.login)}
+                    >
+                      Desafiar
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       {secao('Sua vez', minhaVez, (b) => (
         <li key={b.id} className="batalhas-item batalhas-item--vez">

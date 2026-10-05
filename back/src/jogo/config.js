@@ -39,11 +39,42 @@ module.exports = {
   PRAZO_JOGADA_MS: 4 * HORA_MS,
   PRAZO_DESAFIO_MS: 24 * HORA_MS,
   DESAFIOS_PENDENTES_MAXIMO: 5,
+  // A lista "treinadores para desafiar" mostra quem usou o jogo neste intervalo
+  JANELA_TREINADORES_ATIVOS_HORAS: 24,
   TIMEOUTS_PARA_WO: 2,
   PODER_ATAQUE: 50,
   CHANCE_CRITICO: 1 / 16,
   CHANCE_CRITICO_MAIS_RAPIDO: 1 / 8, // quem é mais rápido que o alvo acerta crítico com mais frequência
   MULT_CRITICO: 1.5,
+
+  // Afeto: carinho, brincar e alimentar somam pontos; cada AFETO_POR_CORACAO pontos é um coração (máx. 5)
+  AFETO_MAXIMO: 500,
+  AFETO_POR_CORACAO: 100,
+  // Cada cuidado tem a própria espera, por Pokémon, e mexe no humor e na energia (0 a 100):
+  // carinho só alegra, brincar alegra mas cansa, alimentar recupera a energia.
+  // Cuidando bem várias vezes ao dia, o afeto máximo sai em ~2-3 dias.
+  CUIDADOS: {
+    carinho: { afeto: 10, humor: 15, energia: 0, esperaMs: 2 * HORA_MS },
+    brincar: { afeto: 20, humor: 25, energia: -25, esperaMs: 4 * HORA_MS },
+    alimentar: { afeto: 20, humor: 0, energia: 35, esperaMs: 4 * HORA_MS },
+  },
+  BEM_ESTAR_MAXIMO: 100,
+  BEM_ESTAR_INICIAL: 50,
+  // Sem cuidados, humor e energia caem devagar (pontos por hora)
+  DESGASTE_POR_HORA: { humor: 2, energia: 1 },
+  BONUS_STATUS_POR_CORACAO: 0.02, // 5 corações = +10% em todos os status
+  // Com afeto máximo, o Pokémon aguenta firme com 1 PS um golpe que o nocautearia (uma vez por batalha)
+  CHANCE_RESISTIR_AFETO_MAXIMO: 0.3,
+
+  // Mercado de trocas
+  PRECO_MAXIMO_ANUNCIO: 100000,
+  ANUNCIOS_ATIVOS_MAXIMO: 20, // por treinador
+  PROPOSTAS_PENDENTES_MAXIMO: 10, // enviadas por treinador
+  POKEMONS_POR_PROPOSTA: 6,
+
+  // Vitrine
+  DESTAQUES_VITRINE: 6,
+  BIO_VITRINE_MAXIMO: 160,
 
   // Recompensas
   RECOMPENSA_VENCEDOR: { pokecoins: 40, xp: 150 },

@@ -1,7 +1,8 @@
 // As chamadas passam pelo back, que repassa para https://pokeapi.co/api/v2
 const BACK_URL = import.meta.env.VITE_BACK_URL ?? 'http://localhost:8080';
 const API_URL = `${BACK_URL}/api/pokeapi`;
-const ARTWORK_URL = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork';
+const SPRITES_URL = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
+const ARTWORK_URL = `${SPRITES_URL}/other/official-artwork`;
 
 // Guarda a promessa de cada requisição para não repetir a mesma chamada
 const cache = new Map();
@@ -64,6 +65,11 @@ export async function listarPokemons() {
 // Arte oficial pelo número, sem precisar buscar o Pokémon inteiro
 export function urlArtwork(id, shiny = false) {
   return shiny ? `${ARTWORK_URL}/shiny/${id}.png` : `${ARTWORK_URL}/${id}.png`;
+}
+
+// Sprite pequeno (96px), mais leve para grades com muitos Pokémon, como o álbum da vitrine
+export function urlSprite(id, shiny = false) {
+  return shiny ? `${SPRITES_URL}/shiny/${id}.png` : `${SPRITES_URL}/${id}.png`;
 }
 
 // Dados completos de um Pokémon (/pokemon/{id})

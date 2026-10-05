@@ -5,7 +5,7 @@ const { montarLado, criarEstado, aplicarAcao, aplicarTimeout } = require('./moto
 // Rng fixo sem crítico e com dano máximo
 const semSorte = () => 0.99;
 
-function lado(usuarioId, velocidadeBase = 50) {
+function lado(usuarioId, velocidadeBase = 50, afeto = 0) {
   const especie = {
     id: 1, nome: 'teste', hp_base: 50, ataque_base: 50, defesa_base: 50, velocidade_base: velocidadeBase,
   };
@@ -13,7 +13,7 @@ function lado(usuarioId, velocidadeBase = 50) {
     especie,
     pokemon: {
       id: usuarioId * 10 + i, mint_numero: i, shiny: false, nivel: 50,
-      iv_hp: 0, iv_ataque: 0, iv_defesa: 0, iv_velocidade: 0,
+      iv_hp: 0, iv_ataque: 0, iv_defesa: 0, iv_velocidade: 0, afeto,
     },
   }));
   return montarLado({ id: usuarioId, login: `treinador${usuarioId}` }, time);
@@ -88,4 +88,38 @@ test('jogar de verdade zera a contagem de timeouts', () => {
   r = aplicarAcao(r.estado, 1, { tipo: 'atacar' }, semSorte);
   r = aplicarTimeout(r.estado); // 0: 1 timeout de novo, sem W.O.
   assert.equal(r.fim, null);
+});
+
+// Ataque que sempre nocauteia: o defensor está com 1 PS
+function quaseNocauteado(afetoDefensor) {
+  const estado = criarEstado(lado(1, 90), lado(2, 50, afetoDefensor));
+  estado.lados[1].pokemons[0].hp = 1;
+  return estado;
+}
+
+test('afeto máximo: 30% de chance de aguentar um golpe letal com 1 PS', () => {
+  // rng: crítico, variação do dano, e por último o sorteio da resistência
+  const resiste = () => 0.1;
+  const { estado, eventos } = aplicarAcao(quaseNocauteado(500), 0, { tipo: 'atacar' }, resiste);
+  assert.equal(estado.lados[1].pokemons[0].hp, 1);
+  assert.equal(estado.lados[1].ativo, 0);
+  assert.ok(eventos.some((e) => e.tipo === 'resistiu' && e.lado === 1));
+  assert.ok(!eventos.some((e) => e.tipo === 'nocaute'));
+
+  // Sorteio acima de 30%: nocauteia normalmente
+  const { eventos: semSorteNoSorteio } = aplicarAcao(quaseNocauteado(500), 0, { tipo: 'atacar' }, semSorte);
+  assert.ok(semSorteNoSorteio.some((e) => e.tipo === 'nocaute'));
+});
+
+test('a resistência do afeto só acontece uma vez por batalha e só com afeto máximo', () => {
+  const resiste = () => 0.1;
+  const primeira = aplicarAcao(quaseNocauteado(500), 0, { tipo: 'atacar' }, resiste);
+  const vezDoOutro = aplicarAcao(primeira.estado, 1, { tipo: 'trocar', indice: 2 }, resiste);
+  const deVolta = aplicarAcao(vezDoOutro.estado, 0, { tipo: 'atacar' }, resiste);
+  const voltou = aplicarAcao(deVolta.estado, 1, { tipo: 'trocar', indice: 0 }, resiste);
+  const segunda = aplicarAcao(voltou.estado, 0, { tipo: 'atacar' }, resiste);
+  assert.ok(segunda.eventos.some((e) => e.tipo === 'nocaute'));
+
+  const { eventos } = aplicarAcao(quaseNocauteado(499), 0, { tipo: 'atacar' }, resiste);
+  assert.ok(eventos.some((e) => e.tipo === 'nocaute'));
 });

@@ -1,0 +1,4 @@
+# O compose passa DATABASE_URL pelo environment; o .env local e as dependências do Windows não entram na imagem
+node_modules
+.env
+test

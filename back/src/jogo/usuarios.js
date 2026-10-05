@@ -10,6 +10,7 @@ const { rngSeguro, inteiroEntre } = require('./aleatorio');
 
 const scrypt = promisify(crypto.scrypt);
 const SESSAO_DURACAO_MS = 30 * 24 * 60 * 60 * 1000;
+const ATUALIZAR_ACESSO_MS = 5 * 60 * 1000;
 
 // ---------------------------------------------------------------------------
 // Senha e sessão
@@ -40,15 +41,25 @@ async function criarSessao(usuarioId) {
   return token;
 }
 
-/** Usuário dono do token, ou null se o token não existe ou expirou */
+/**
+ * Usuário dono do token, ou null se o token não existe ou expirou.
+ * Também marca o último acesso (para a lista de treinadores ativos), mas só
+ * grava se passou de ATUALIZAR_ACESSO_MS, para não escrever no banco a cada requisição.
+ */
 async function usuarioDaSessao(token) {
   const { rows } = await pool.query(
-    `SELECT u.id, u.login, u.pokecoins
+    `SELECT u.id, u.login, u.pokecoins, u.ultimo_acesso_em
        FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id
       WHERE s.token_hash = $1 AND s.expira_em > now()`,
     [hashToken(token)],
   );
-  return rows[0] ?? null;
+  if (!rows[0]) return null;
+
+  const { ultimo_acesso_em: ultimoAcesso, ...usuario } = rows[0];
+  if (Date.now() - ultimoAcesso.getTime() > ATUALIZAR_ACESSO_MS) {
+    await pool.query('UPDATE usuarios SET ultimo_acesso_em = now() WHERE id = $1', [usuario.id]);
+  }
+  return usuario;
 }
 
 async function encerrarSessao(token) {
@@ -97,6 +108,7 @@ async function entrar(login, senha) {
     throw new ErroJogo('Usuário ou senha incorretos.');
   }
   const { senha_hash: _, ...usuario } = encontrado;
+  await pool.query('UPDATE usuarios SET ultimo_acesso_em = now() WHERE id = $1', [usuario.id]);
   return { usuario, token: await criarSessao(usuario.id) };
 }
 
@@ -133,6 +145,44 @@ async function buscarTreinadores(usuarioId, busca) {
     [usuarioId, `${busca.replace(/[\\%_]/g, '\\$&')}%`],
   );
   return rows.map((r) => r.login);
+}
+
+/**
+ * Treinadores que usaram o jogo nas últimas JANELA_TREINADORES_ATIVOS_HORAS e
+ * podem ser desafiados agora (time completo), do acesso mais recente para o mais antigo.
+ * Para cada um diz também se já existe um desafio pendente ou batalha em andamento
+ * entre os dois, para o front não oferecer um desafio que o back recusaria.
+ * @param {number} usuarioId  quem está pedindo (fica fora da lista)
+ */
+async function listarTreinadoresAtivos(usuarioId) {
+  const { rows } = await pool.query(
+    `SELECT u.login,
+            u.ultimo_acesso_em AS "ultimoAcessoEm",
+            round(avg(p.nivel))::int AS "nivelMedio",
+            json_agg(json_build_object('especieId', p.especie_id, 'nome', e.nome, 'shiny', p.shiny, 'nivel', p.nivel)
+                     ORDER BY p.posicao_time) AS time,
+            EXISTS (SELECT 1 FROM batalhas b
+                     WHERE b.status = 'aguardando' AND b.expira_em > now()
+                       AND b.desafiante_id = $1 AND b.desafiado_id = u.id) AS "desafioEnviado",
+            EXISTS (SELECT 1 FROM batalhas b
+                     WHERE b.status = 'aguardando' AND b.expira_em > now()
+                       AND b.desafiante_id = u.id AND b.desafiado_id = $1) AS "desafioRecebido",
+            EXISTS (SELECT 1 FROM batalhas b
+                     WHERE b.status = 'em_andamento'
+                       AND $1 IN (b.desafiante_id, b.desafiado_id)
+                       AND u.id IN (b.desafiante_id, b.desafiado_id)) AS "emBatalha"
+       FROM usuarios u
+       JOIN pokemons p ON p.dono_id = u.id AND p.posicao_time IS NOT NULL
+       JOIN especies e ON e.id = p.especie_id
+      WHERE u.id <> $1
+        AND u.ultimo_acesso_em > now() - make_interval(hours => $2)
+      GROUP BY u.id
+     HAVING count(*) = $3
+      ORDER BY u.ultimo_acesso_em DESC
+      LIMIT 50`,
+    [usuarioId, config.JANELA_TREINADORES_ATIVOS_HORAS, config.TAMANHO_TIME],
+  );
+  return rows;
 }
 
 // ---------------------------------------------------------------------------
@@ -232,6 +282,14 @@ async function definirTime(usuarioId, pokemonIds) {
       [pokemonIds, usuarioId],
     );
     if (rowCount !== pokemonIds.length) throw new ErroJogo('Algum desses Pokémon não é seu.');
+    // Pokémon do time não podem ser trocados, então um anunciado não pode entrar no time
+    const anunciados = await client.query(
+      "SELECT 1 FROM anuncios WHERE pokemon_id = ANY($1) AND status = 'ativo'",
+      [pokemonIds],
+    );
+    if (anunciados.rowCount > 0) {
+      throw new ErroJogo('Algum desses Pokémon está anunciado nas trocas. Cancele o anúncio antes de colocá-lo no time.');
+    }
 
     // Limpa antes de gravar para não esbarrar no UNIQUE (dono_id, posicao_time)
     await client.query('UPDATE pokemons SET posicao_time = NULL WHERE dono_id = $1', [usuarioId]);
@@ -247,6 +305,7 @@ module.exports = {
   existeUsuario,
   redefinirSenha,
   buscarTreinadores,
+  listarTreinadoresAtivos,
   usuarioDaSessao,
   encerrarSessao,
   escolherInicial,

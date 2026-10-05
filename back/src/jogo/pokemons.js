@@ -1,15 +1,20 @@
-// Cards no banco: mint, coleção, XP pós-batalha e evolução
+// Cards no banco: mint, coleção, XP pós-batalha, evolução e cuidados (afeto)
 const { pool, transacao } = require('../db');
 const {
-  sortearAtributos, aplicarXp, evolucoesDisponiveis, descreverPokemon,
+  sortearAtributos, aplicarXp, evolucoesDisponiveis, descreverPokemon, aplicarCuidado, bemEstarAtual,
 } = require('./regras');
 const { garantirEspecie } = require('./especies');
 const { ErroJogo } = require('./erros');
 const { rngSeguro } = require('./aleatorio');
 
-// Os campos de especies vêm depois de p.* e sobrescreveriam o "id" do card, então listamos só os necessários
+// Os campos de especies vêm depois de p.* e sobrescreveriam o "id" do card, então listamos só os necessários.
+// ultimos_cuidados: { "carinho": <data do último>, ... }, para o front saber quando cada cuidado volta.
 const CAMPOS_CARD = `p.*, e.nome, e.tipos, e.raridade, e.hp_base, e.ataque_base, e.defesa_base,
-  e.velocidade_base, e.altura_base, e.peso_base, e.evolucoes`;
+  e.velocidade_base, e.altura_base, e.peso_base, e.evolucoes,
+  (SELECT jsonb_object_agg(c.tipo, c.ultimo)
+     FROM (SELECT tipo, max(criado_em) AS ultimo FROM cuidados WHERE pokemon_id = p.id GROUP BY tipo) c
+  ) AS ultimos_cuidados,
+  EXISTS (SELECT 1 FROM anuncios WHERE pokemon_id = p.id AND status = 'ativo') AS anunciado`;
 
 /**
  * Cria um card único. A espécie já precisa estar no cache (garantirEspecie).
@@ -120,6 +125,53 @@ async function evoluir(usuarioId, pokemonId, especieDestinoId) {
   });
 }
 
+/**
+ * Carinho, brincar ou alimentar. Cada tipo tem a própria espera (config.CUIDADOS);
+ * a linha do card fica travada para dois cliques não passarem juntos pela espera.
+ * @param {number} usuarioId
+ * @param {number} pokemonId
+ * @param {'carinho' | 'brincar' | 'alimentar'} tipo
+ */
+async function cuidar(usuarioId, pokemonId, tipo) {
+  return transacao(async (client) => {
+    const { rows } = await client.query(
+      'SELECT dono_id, afeto, humor, energia, bem_estar_em FROM pokemons WHERE id = $1 FOR UPDATE',
+      [pokemonId],
+    );
+    const pokemon = rows[0];
+    if (!pokemon || pokemon.dono_id !== usuarioId) throw new ErroJogo('Pokémon não encontrado.');
+
+    const { rows: [ultimo] } = await client.query(
+      'SELECT max(criado_em) AS em FROM cuidados WHERE pokemon_id = $1 AND tipo = $2',
+      [pokemonId, tipo],
+    );
+    const agora = new Date();
+    const novo = aplicarCuidado({ afeto: pokemon.afeto, ...bemEstarAtual(pokemon, agora) }, tipo, ultimo.em, agora);
+
+    // Grava humor e energia já com o desgaste até agora e reinicia a contagem
+    await client.query(
+      'UPDATE pokemons SET afeto = $2, humor = $3, energia = $4, bem_estar_em = $5 WHERE id = $1',
+      [pokemonId, novo.afeto, novo.humor, novo.energia, agora],
+    );
+    await client.query('INSERT INTO cuidados (pokemon_id, tipo, afeto) VALUES ($1, $2, $3)', [pokemonId, tipo, novo.ganho]);
+    return { pokemon: await buscarCard(client, pokemonId), ganho: novo.ganho };
+  });
+}
+
+/** Últimos cuidados do card (o "hoje" do cantinho de cuidado) */
+async function listarCuidados(usuarioId, pokemonId) {
+  const { rows } = await pool.query(
+    `SELECT c.tipo, c.afeto, c.criado_em AS "criadoEm"
+       FROM cuidados c JOIN pokemons p ON p.id = c.pokemon_id
+      WHERE c.pokemon_id = $1 AND p.dono_id = $2
+      ORDER BY c.id DESC
+      LIMIT 10`,
+    [pokemonId, usuarioId],
+  );
+  return rows;
+}
+
 module.exports = {
-  mintarPokemon, buscarCard, listarColecao, darXp, evoluir,
+  CAMPOS_CARD,
+  mintarPokemon, buscarCard, listarColecao, darXp, evoluir, cuidar, listarCuidados,
 };

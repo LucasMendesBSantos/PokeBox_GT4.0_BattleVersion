@@ -1,0 +1,878 @@
+/* Estilos da página de trocas e dos componentes dela (Mercado, Anunciar, Propostas, PropostaForm) */
+.trocas {
+  --trocas-verde: #3fb27f;
+  --trocas-verde-escuro: #23885a;
+}
+
+.trocas-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 20px;
+}
+
+.trocas-titulo-pagina {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--poke-navy);
+}
+
+.trocas-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 12px;
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--poke-navy);
+}
+
+.trocas-titulo img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.trocas-subtitulo {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--poke-navy);
+}
+
+.trocas-dica {
+  margin: 0;
+  font-size: 14px;
+  color: #555;
+}
+
+.trocas-vazio {
+  padding: 24px;
+  text-align: center;
+  font-weight: 700;
+  color: #555;
+  background: #fff;
+  border: 3px dashed #bbb;
+  border-radius: 18px;
+}
+
+.trocas-contagem {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: #666;
+}
+
+/* Abas */
+.trocas-abas,
+.trocas-subabas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trocas-subabas {
+  margin-bottom: 16px;
+}
+
+.trocas-aba,
+.trocas-subaba {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--poke-navy);
+  background: #fff;
+  border: 3px solid var(--poke-ink);
+  border-radius: 999px;
+  box-shadow: 0 3px 0 var(--poke-ink);
+  cursor: pointer;
+}
+
+.trocas-subaba {
+  padding: 6px 14px;
+  font-size: 14px;
+}
+
+.trocas-aba[aria-selected='true'],
+.trocas-subaba[aria-selected='true'] {
+  background: var(--poke-yellow);
+}
+
+.trocas-contador {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  font-size: 12px;
+  color: #fff;
+  background: var(--dex-red);
+  border-radius: 999px;
+}
+
+/* Busca e ordenação */
+.trocas-barra-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.trocas-busca {
+  flex: 1 1 240px;
+  max-width: 420px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 16px;
+  border: 3px solid var(--poke-ink);
+  border-radius: 12px;
+}
+
+.trocas-ordenar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #555;
+}
+
+.trocas-ordenar select {
+  padding: 8px 10px;
+  font: inherit;
+  font-weight: 800;
+  color: var(--poke-navy);
+  background: #fff;
+  border: 3px solid var(--poke-ink);
+  border-radius: 10px;
+}
+
+/* Grade de espécies e de anúncios */
+.trocas-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trocas-especie,
+.trocas-anuncio {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  padding: 14px;
+  font-family: inherit;
+  text-align: left;
+  color: var(--poke-ink);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--trocas-cor) 22%, #fff), #fff 45%);
+  border: 3px solid var(--poke-ink);
+  border-radius: 18px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+.trocas-especie {
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.trocas-especie:hover {
+  transform: translateY(-3px);
+  box-shadow: 4px 7px 0 rgba(0, 0, 0, 0.2);
+}
+
+.trocas-anuncio--shiny {
+  box-shadow: 0 0 0 3px #ffcb05, 4px 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+.trocas-especie-tipo {
+  font-size: 13px;
+  font-weight: 700;
+  color: #666;
+}
+
+.trocas-especie-nome {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--poke-navy);
+  overflow-wrap: anywhere;
+}
+
+.trocas-shiny {
+  color: #b38600;
+}
+
+.trocas-especie img,
+.trocas-anuncio > img {
+  align-self: center;
+  width: 100%;
+  max-width: 150px;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.trocas-especie-qtd {
+  margin-top: auto;
+  font-size: 13px;
+  color: #666;
+}
+
+.trocas-especie-preco {
+  padding: 9px 12px;
+  font-size: 14px;
+  font-weight: 900;
+  text-align: center;
+  color: var(--poke-navy);
+  background: #f2f4f8;
+  border: 2px solid var(--poke-ink);
+  border-radius: 10px;
+}
+
+.trocas-especie:hover .trocas-especie-preco {
+  background: var(--poke-yellow);
+}
+
+.trocas-vendedor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  color: #444;
+}
+
+.trocas-vendedor strong {
+  color: var(--poke-navy);
+}
+
+.trocas-status {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin: 4px 0 0;
+  text-align: center;
+}
+
+.trocas-status div {
+  display: grid;
+  padding: 4px 2px;
+  background: #f2f4f8;
+  border-radius: 8px;
+}
+
+.trocas-status dt {
+  font-size: 11px;
+  font-weight: 700;
+  color: #666;
+}
+
+.trocas-status dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.trocas-status .trocas-status-iv {
+  font-size: 10px;
+  font-weight: 700;
+  color: #888;
+}
+
+/* Barra de IVs: vermelho (fraco) -> verde (perfeito), com a marca da soma */
+.trocas-ivs {
+  display: grid;
+  gap: 4px;
+}
+
+.trocas-ivs-texto {
+  font-size: 13px;
+  font-weight: 700;
+  color: #444;
+}
+
+.trocas-ivs-barra {
+  position: relative;
+  display: block;
+  height: 8px;
+  background: linear-gradient(90deg, #c24a3a, #e0a63c 45%, #8cbf4f 75%, #3a8f3a);
+  border-radius: 999px;
+}
+
+.trocas-ivs-marca {
+  position: absolute;
+  top: -5px;
+  width: 4px;
+  height: 18px;
+  background: var(--poke-ink);
+  border: 1px solid #fff;
+  border-radius: 2px;
+  transform: translateX(-50%);
+}
+
+.trocas-medidas {
+  font-size: 12px;
+  color: #777;
+}
+
+.trocas-anuncio-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 2px dashed rgba(0, 0, 0, 0.15);
+}
+
+.trocas-preco {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--poke-navy);
+}
+
+.trocas-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.trocas-meu {
+  font-size: 13px;
+  font-weight: 800;
+  color: #666;
+}
+
+/* Botões */
+.trocas-botao,
+.trocas-voltar {
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  color: #fff;
+  background: var(--dex-red);
+  border: 3px solid var(--poke-ink);
+  border-radius: 999px;
+  box-shadow: 0 3px 0 var(--poke-ink);
+  cursor: pointer;
+}
+
+.trocas-botao--secundario,
+.trocas-voltar {
+  color: var(--poke-navy);
+  background: #fff;
+}
+
+.trocas-botao--comprar {
+  background: var(--trocas-verde);
+}
+
+.trocas-botao:active:not(:disabled),
+.trocas-voltar:active,
+.trocas-aba:active,
+.trocas-subaba:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--poke-ink);
+}
+
+.trocas-botao:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Escolha de Pokémon (anunciar e propor) */
+.trocas-escolha {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trocas-escolha-item {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  padding: 8px 6px 10px;
+  font-family: inherit;
+  color: var(--poke-ink);
+  background: #fff;
+  border: 3px solid var(--poke-ink);
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.trocas-escolha-item[aria-pressed='true'] {
+  background: #e3f6ec;
+  box-shadow: 0 0 0 3px var(--trocas-verde);
+}
+
+.trocas-escolha-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.trocas-escolha-item img {
+  width: 72px;
+  height: 72px;
+  image-rendering: pixelated;
+}
+
+.trocas-escolha-item strong {
+  font-size: 13px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.trocas-escolha-item span {
+  font-size: 11px;
+  font-weight: 700;
+  color: #666;
+}
+
+/* Anunciar */
+.trocas-anunciar {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.trocas-painel,
+.trocas-proposta-form {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  background: #fff;
+  border: 3px solid var(--poke-ink);
+  border-radius: 18px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+.trocas-painel .trocas-subtitulo {
+  margin: 0;
+}
+
+.trocas-escolhido {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--trocas-cor) 18%, #fff);
+  border: 2px solid var(--poke-ink);
+  border-radius: 14px;
+}
+
+.trocas-escolhido img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+.trocas-escolhido div {
+  display: grid;
+  gap: 2px;
+}
+
+.trocas-escolhido strong {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--poke-navy);
+}
+
+.trocas-escolhido span {
+  font-size: 13px;
+  color: #555;
+}
+
+.trocas-opcao {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 2px solid #ccc;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.trocas-opcao:has(input:checked) {
+  background: #e3f6ec;
+  border-color: var(--trocas-verde);
+}
+
+.trocas-opcao input {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--trocas-verde-escuro);
+}
+
+.trocas-opcao > span {
+  display: grid;
+  gap: 2px;
+}
+
+.trocas-opcao strong {
+  color: var(--poke-navy);
+}
+
+.trocas-opcao > span > span {
+  font-size: 13px;
+  color: #555;
+}
+
+.trocas-campo {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.trocas-campo > span,
+.trocas-campo legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font-weight: 900;
+  color: var(--poke-navy);
+}
+
+.trocas-campo input {
+  max-width: 220px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 16px;
+  border: 3px solid var(--poke-ink);
+  border-radius: 12px;
+}
+
+.trocas-meus {
+  margin-top: 28px;
+}
+
+.trocas-lista {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trocas-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: #fff;
+  border: 3px solid var(--poke-ink);
+  border-radius: 14px;
+}
+
+.trocas-linha img {
+  width: 56px;
+  height: 56px;
+  image-rendering: pixelated;
+}
+
+.trocas-linha-texto {
+  display: grid;
+  flex: 1 1 180px;
+}
+
+.trocas-linha-texto strong {
+  color: var(--poke-navy);
+}
+
+.trocas-linha-texto span {
+  font-size: 13px;
+  color: #555;
+}
+
+.trocas-selo {
+  padding: 4px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  color: #fff;
+  background: var(--dex-red);
+  border: 2px solid var(--poke-ink);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* Resumo da proposta: oferta -> alvo */
+.trocas-resumo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: #f2f4f8;
+  border: 2px solid var(--poke-ink);
+  border-radius: 14px;
+}
+
+.trocas-resumo-oferta {
+  display: flex;
+  flex: 1 1 260px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.trocas-resumo-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.trocas-resumo-item img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.trocas-resumo-alvo {
+  padding: 4px 12px 4px 4px;
+  background: #fff8d6;
+  border: 2px solid var(--poke-ink);
+  border-radius: 14px;
+}
+
+.trocas-mais {
+  font-size: 22px;
+  font-weight: 900;
+  color: #888;
+}
+
+.trocas-seta {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--trocas-verde-escuro);
+}
+
+.trocas-moedas {
+  display: inline-grid;
+  place-items: center;
+  min-width: 56px;
+  height: 56px;
+  padding: 0 8px;
+  font-size: 15px;
+  font-weight: 900;
+  color: #6b4f00;
+  background: radial-gradient(circle at 35% 35%, #fff6b0, var(--poke-yellow) 50%, #c99a00);
+  border: 2px solid var(--poke-ink);
+  border-radius: 999px;
+}
+
+.trocas-moedas--grande {
+  min-width: 96px;
+  height: 96px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.trocas-moedas small {
+  font-size: 11px;
+}
+
+.trocas-form-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 10px;
+}
+
+.trocas-proposta-form .trocas-voltar {
+  justify-self: start;
+}
+
+/* Cards de proposta */
+.trocas-propostas {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trocas-proposta {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  background: #fff;
+  border: 3px solid var(--poke-ink);
+  border-radius: 18px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+.trocas-proposta:not([data-status='pendente']) {
+  opacity: 0.7;
+  box-shadow: none;
+}
+
+.trocas-proposta-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+
+.trocas-proposta-topo strong {
+  color: var(--poke-navy);
+}
+
+.trocas-proposta-status {
+  margin-left: auto;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 900;
+  background: #eee;
+  border: 2px solid var(--poke-ink);
+  border-radius: 999px;
+}
+
+.trocas-proposta[data-status='pendente'] .trocas-proposta-status {
+  background: var(--poke-yellow);
+}
+
+.trocas-proposta[data-status='aceita'] .trocas-proposta-status {
+  color: #fff;
+  background: var(--trocas-verde);
+}
+
+.trocas-proposta-corpo {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.trocas-proposta-corpo h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #666;
+}
+
+.trocas-proposta-oferta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.trocas-proposta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trocas-mini {
+  display: grid;
+  justify-items: center;
+  width: 110px;
+  margin: 0;
+  padding: 8px;
+  text-align: center;
+  background: #f2f4f8;
+  border: 2px solid var(--poke-ink);
+  border-radius: 14px;
+}
+
+.trocas-mini--grande {
+  width: 150px;
+  background: #fff8d6;
+}
+
+.trocas-mini img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+
+.trocas-mini--grande img {
+  width: 110px;
+  height: 110px;
+}
+
+.trocas-mini figcaption {
+  display: grid;
+  gap: 1px;
+}
+
+.trocas-mini strong {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--poke-navy);
+  overflow-wrap: anywhere;
+}
+
+.trocas-mini span {
+  font-size: 11px;
+  color: #666;
+}
+
+.trocas-proposta-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding-top: 10px;
+  border-top: 2px dashed rgba(0, 0, 0, 0.15);
+}
+
+.trocas-proposta-resumo {
+  flex: 1 1 240px;
+  font-weight: 900;
+  color: var(--poke-navy);
+}
+
+.trocas-proposta-rodape time {
+  font-size: 13px;
+  color: #888;
+}
+
+.trocas-aba:focus-visible,
+.trocas-subaba:focus-visible,
+.trocas-busca:focus-visible,
+.trocas-ordenar select:focus-visible,
+.trocas-especie:focus-visible,
+.trocas-botao:focus-visible,
+.trocas-voltar:focus-visible,
+.trocas-escolha-item:focus-visible,
+.trocas-selo:focus-visible,
+.trocas-campo input:focus-visible,
+.trocas-opcao:has(input:focus-visible) {
+  outline: 3px solid var(--poke-blue);
+  outline-offset: 2px;
+}
+
+@media (max-width: 800px) {
+  .trocas-anunciar,
+  .trocas-proposta-corpo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

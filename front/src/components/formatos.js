@@ -17,6 +17,19 @@ export const formatoPokemon = PropTypes.shape({
   alturaM: PropTypes.number.isRequired,
   pesoKg: PropTypes.number.isRequired,
   posicaoTime: PropTypes.number,
+  posicaoVitrine: PropTypes.number,
+  anunciado: PropTypes.bool.isRequired,
+  afeto: PropTypes.shape({
+    pontos: PropTypes.number.isRequired,
+    coracoes: PropTypes.number.isRequired,
+    maximo: PropTypes.bool.isRequired,
+    faltamParaProximo: PropTypes.number,
+    bonusStatus: PropTypes.number.isRequired,
+  }).isRequired,
+  humor: PropTypes.number.isRequired,
+  energia: PropTypes.number.isRequired,
+  // Quando cada cuidado volta (data ISO) ou null se já está disponível
+  cuidadosDisponiveisEm: PropTypes.objectOf(PropTypes.string).isRequired,
   evolucoes: PropTypes.arrayOf(PropTypes.shape({
     especieId: PropTypes.number.isRequired,
     nome: PropTypes.string.isRequired,

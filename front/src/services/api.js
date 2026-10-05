@@ -51,7 +51,13 @@ async function chamar(metodo, caminho, corpo) {
   }
 
   const texto = await resposta.text();
-  const dados = texto ? JSON.parse(texto) : null;
+  let dados;
+  try {
+    dados = texto ? JSON.parse(texto) : null;
+  } catch {
+    // Ex.: página HTML de 404 quando o back está rodando uma versão antiga, sem esta rota
+    throw new ErroApi('O servidor respondeu algo inesperado. Ele pode estar desatualizado; reinicie o back.', resposta.status);
+  }
   if (!resposta.ok) {
     if (resposta.status === 401) salvarToken(null);
     throw new ErroApi(dados?.erro ?? 'Algo deu errado. Tente novamente.', resposta.status);
@@ -89,7 +95,10 @@ export const escolherInicial = (especieId) => chamar('POST', '/eu/inicial', { es
 export const comprarPokemon = () => chamar('POST', '/loja/comprar');
 export const salvarTime = (pokemonIds) => chamar('PUT', '/time', { pokemonIds });
 export const evoluir = (pokemonId, especieId) => chamar('POST', `/pokemons/${pokemonId}/evoluir`, { especieId });
+export const cuidar = (pokemonId, tipo) => chamar('POST', `/pokemons/${pokemonId}/cuidar`, { tipo });
+export const listarCuidados = (pokemonId) => chamar('GET', `/pokemons/${pokemonId}/cuidados`);
 export const buscarTreinadores = (busca) => chamar('GET', `/treinadores?busca=${encodeURIComponent(busca)}`);
+export const listarTreinadoresAtivos = () => chamar('GET', '/treinadores/ativos');
 
 // Batalhas
 export const listarBatalhas = () => chamar('GET', '/batalhas');
@@ -97,3 +106,21 @@ export const desafiar = (oponente) => chamar('POST', '/batalhas', { oponente });
 export const buscarBatalha = (id) => chamar('GET', `/batalhas/${id}`);
 export const responderDesafio = (id, aceitar) => chamar('POST', `/batalhas/${id}/responder`, { aceitar });
 export const jogar = (id, jogada) => chamar('POST', `/batalhas/${id}/jogadas`, jogada);
+
+// Vitrine
+export const listarVitrines = (busca = '') => chamar('GET', `/vitrines?busca=${encodeURIComponent(busca)}`);
+export const buscarVitrine = (login) => chamar('GET', `/vitrines/${encodeURIComponent(login)}`);
+export const salvarVitrine = (dados) => chamar('PUT', '/vitrine', dados);
+
+// Trocas
+export const listarMercado = (busca, ordem) => chamar('GET', `/mercado?busca=${encodeURIComponent(busca)}&ordem=${ordem}`);
+export const listarAnunciosDaEspecie = (especieId, ordem) => chamar('GET', `/mercado/${especieId}?ordem=${ordem}`);
+export const listarMeusAnuncios = () => chamar('GET', '/anuncios/meus');
+export const criarAnuncio = (dados) => chamar('POST', '/anuncios', dados);
+export const cancelarAnuncio = (id) => chamar('DELETE', `/anuncios/${id}`);
+export const comprarAnuncio = (id) => chamar('POST', `/anuncios/${id}/comprar`);
+export const proporTroca = (anuncioId, oferta) => chamar('POST', `/anuncios/${anuncioId}/propostas`, oferta);
+export const listarPropostas = () => chamar('GET', '/propostas');
+export const aceitarProposta = (id) => chamar('POST', `/propostas/${id}/aceitar`);
+export const recusarProposta = (id) => chamar('POST', `/propostas/${id}/recusar`);
+export const cancelarProposta = (id) => chamar('DELETE', `/propostas/${id}`);

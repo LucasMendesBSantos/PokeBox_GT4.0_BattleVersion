@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import CartaPokemon from '../components/CartaPokemon';
+import CantinhoCuidado from '../components/CantinhoCuidado';
 import { formatoPokemon } from '../components/formatos';
 import { formatarNome, formatarNumero } from '../components/tipos';
 import { urlArtwork } from '../services/pokeapi';
@@ -65,13 +66,18 @@ function encontrarInicial(id) {
   return INICIAIS.flatMap(({ pokemons }) => pokemons).find((pokemon) => pokemon.id === id) ?? null;
 }
 
-function MeusPokemons({ usuario, onEscolherInicial, onEvoluir }) {
+function MeusPokemons({
+  usuario, onEscolherInicial, onEvoluir, onCuidar,
+}) {
   const [escolhido, setEscolhido] = useState(null);
+  // Id do Pokémon aberto no cantinho de cuidado
+  const [cuidandoId, setCuidandoId] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState(null);
   const [aviso, setAviso] = useState(null);
 
   const inicialEscolhido = encontrarInicial(escolhido);
+  const cuidando = usuario.pokemons.find((pokemon) => pokemon.id === cuidandoId);
 
   // As duas ações seguem o mesmo roteiro: trava os botões, mostra erro ou aviso
   const executar = async (acao) => {
@@ -144,17 +150,31 @@ function MeusPokemons({ usuario, onEscolherInicial, onEvoluir }) {
       <p className="meus-pokemons-texto">
         {`${usuario.pokemons.length === 1 ? '1 Pokémon' : `${usuario.pokemons.length} Pokémon`}. `}
         Cada card é único: IVs, altura, peso e shiny foram sorteados quando ele chegou até você.
+        Dê carinho, brinque e alimente seus Pokémon para ganhar corações de afeto.
       </p>
 
       <ul className="meus-pokemons-grade">
         {usuario.pokemons.map((pokemon) => (
           <li key={pokemon.id}>
-            <CartaPokemon pokemon={pokemon} onEvoluir={handleEvoluir} evoluindo={enviando} />
+            <CartaPokemon
+              pokemon={pokemon}
+              onEvoluir={handleEvoluir}
+              evoluindo={enviando}
+              onCuidar={() => {
+                setAviso(null);
+                setCuidandoId(pokemon.id);
+                window.scrollTo(0, 0);
+              }}
+            />
           </li>
         ))}
       </ul>
     </section>
   );
+
+  if (cuidando) {
+    return <CantinhoCuidado pokemon={cuidando} onCuidar={onCuidar} onVoltar={() => setCuidandoId(null)} />;
+  }
 
   return (
     <>
@@ -171,6 +191,7 @@ MeusPokemons.propTypes = {
   }).isRequired,
   onEscolherInicial: PropTypes.func.isRequired,
   onEvoluir: PropTypes.func.isRequired,
+  onCuidar: PropTypes.func.isRequired,
 };
 
 export default MeusPokemons;

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { urlArtwork } from '../services/pokeapi';
+import Coracoes from './Coracoes';
 import { formatoPokemon } from './formatos';
 import { dadosTipo, formatarNome, formatarNumero } from './tipos';
 import './CartaPokemon.css';
@@ -25,6 +26,7 @@ function CartaPokemon({
   compacto = false,
   onEvoluir = null,
   evoluindo = false,
+  onCuidar = null,
   children = null,
 }) {
   const cor = dadosTipo(pokemon.tipos[0]).cor;
@@ -45,6 +47,7 @@ function CartaPokemon({
             <span className="carta-selo carta-selo--raro">{RARIDADES[pokemon.raridade]}</span>
           )}
           {pokemon.posicaoTime && <span className="carta-selo">{`Time #${pokemon.posicaoTime}`}</span>}
+          {pokemon.anunciado && <span className="carta-selo carta-selo--anunciado">Nas trocas</span>}
         </div>
       </header>
 
@@ -74,6 +77,21 @@ function CartaPokemon({
           <span style={{ width: `${porcentagemXp}%` }} />
         </span>
       </div>
+
+      <div className="carta-afeto">
+        <Coracoes quantidade={pokemon.afeto.coracoes} tamanho={compacto ? 'pequeno' : 'normal'} />
+        {pokemon.afeto.bonusStatus > 0 && (
+          <span className="carta-afeto-bonus" title="Bônus do afeto em todos os status">
+            {`+${Math.round(pokemon.afeto.bonusStatus * 100)}% status`}
+          </span>
+        )}
+      </div>
+
+      {onCuidar && (
+        <button type="button" className="carta-cuidar" onClick={() => onCuidar(pokemon)}>
+          {`Cuidar de ${nome}`}
+        </button>
+      )}
 
       {!compacto && (
         <>
@@ -137,6 +155,7 @@ CartaPokemon.propTypes = {
   compacto: PropTypes.bool,
   onEvoluir: PropTypes.func,
   evoluindo: PropTypes.bool,
+  onCuidar: PropTypes.func,
   children: PropTypes.node,
 };
 

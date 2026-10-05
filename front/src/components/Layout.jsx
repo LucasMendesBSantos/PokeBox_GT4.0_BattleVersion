@@ -6,6 +6,8 @@ const MENU = [
   { tela: 'meusPokemons', nome: 'Meus Pokémon' },
   { tela: 'loja', nome: 'Loja' },
   { tela: 'time', nome: 'Time' },
+  { tela: 'vitrine', nome: 'Vitrine' },
+  { tela: 'trocas', nome: 'Trocas' },
   { tela: 'batalhas', nome: 'Batalhas' },
 ];
 

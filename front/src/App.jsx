@@ -9,6 +9,8 @@ import Loja from './pages/Loja';
 import Time from './pages/Time';
 import Batalhas from './pages/Batalhas';
 import Batalha from './pages/Batalha';
+import Vitrine from './pages/Vitrine';
+import Trocas from './pages/Trocas';
 import * as api from './services/api';
 
 const TAMANHO_TIME = 5;
@@ -129,8 +131,15 @@ function App() {
           await recarregarUsuario();
           return evoluido;
         }}
+        onCuidar={async (pokemonId, tipo) => {
+          const cuidado = await api.cuidar(pokemonId, tipo);
+          await recarregarUsuario();
+          return cuidado;
+        }}
       />
     ),
+    vitrine: () => <Vitrine usuario={usuario} />,
+    trocas: () => <Trocas usuario={usuario} onAtualizarUsuario={recarregarUsuario} />,
     loja: () => (
       <Loja
         usuario={usuario}

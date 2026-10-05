@@ -23,6 +23,8 @@ function descreverEventos(acao, estado) {
     switch (evento.tipo) {
       case 'dano':
         return `${nomePokemon(evento.atacante)} causou ${evento.dano} de dano em ${nomePokemon(evento.alvo)}${evento.critico ? ' (crítico!)' : ''}.`;
+      case 'resistiu':
+        return `${nomePokemon(evento.pokemonId)} de ${login(evento.lado)} aguentou firme com 1 PS pelo afeto ao treinador!`;
       case 'nocaute':
         return `${nomePokemon(evento.pokemonId)} de ${login(evento.lado)} foi nocauteado!`;
       case 'entrou':

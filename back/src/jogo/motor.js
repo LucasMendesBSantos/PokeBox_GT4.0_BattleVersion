@@ -1,7 +1,7 @@
 // Motor de batalha puro: recebe o estado e uma ação, devolve o novo estado e o que aconteceu.
 // Não sabe nada de banco, relógio ou prazo; quem cuida disso é batalhas.js.
 const config = require('./config');
-const { calcularStatus } = require('./regras');
+const { calcularStatus, afetoMaximo } = require('./regras');
 const { rngSeguro, decimalEntre } = require('./aleatorio');
 const { ErroJogo } = require('./erros');
 
@@ -19,6 +19,8 @@ const { ErroJogo } = require('./erros');
  * @property {number} ataque
  * @property {number} defesa
  * @property {number} velocidade
+ * @property {boolean} afetoMaximo   pode aguentar um golpe letal com 1 PS
+ * @property {boolean} resistiu      já usou essa chance nesta batalha
  *
  * @typedef {object} Lado
  * @property {number} usuarioId
@@ -69,6 +71,8 @@ function montarLado(usuario, time) {
         ataque: status.ataque,
         defesa: status.defesa,
         velocidade: status.velocidade,
+        afetoMaximo: afetoMaximo(pokemon.afeto),
+        resistiu: false,
       };
     }),
   };
@@ -132,11 +136,18 @@ function aplicarAcao(estadoAtual, indiceJogador, acao, rng = rngSeguro) {
     const atacante = eu.pokemons[eu.ativo];
     const defensor = oponente.pokemons[oponente.ativo];
     const { dano, critico } = calcularDano(atacante, defensor, rng);
-    defensor.hp = Math.max(0, defensor.hp - dano);
+    // Afeto máximo: chance de aguentar firme com 1 PS, uma vez por batalha (estados antigos não têm o campo)
+    const resistiu = dano >= defensor.hp && defensor.afetoMaximo && !defensor.resistiu
+      && rng() < config.CHANCE_RESISTIR_AFETO_MAXIMO;
+    defensor.hp = resistiu ? 1 : Math.max(0, defensor.hp - dano);
     eventos.push({
       tipo: 'dano', lado: indiceJogador, atacante: atacante.pokemonId, alvo: defensor.pokemonId,
       dano, critico, hpRestante: defensor.hp,
     });
+    if (resistiu) {
+      defensor.resistiu = true;
+      eventos.push({ tipo: 'resistiu', lado: outro(indiceJogador), pokemonId: defensor.pokemonId });
+    }
 
     if (defensor.hp === 0) {
       eventos.push({ tipo: 'nocaute', lado: outro(indiceJogador), pokemonId: defensor.pokemonId });

@@ -146,6 +146,87 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
     assert.equal((await api('PUT', '/time', { token: t.ash.token, corpo: { pokemonIds: comDoGary } })).status, 400);
   });
 
+  await s.test('cuidados: afeto sobe e cada cuidado tem espera', async () => {
+    const id = t.charmander.id;
+    const carinho = await api('POST', `/pokemons/${id}/cuidar`, { token: t.ash.token, corpo: { tipo: 'carinho' } });
+    assert.equal(carinho.status, 200, JSON.stringify(carinho.dados));
+    assert.equal(carinho.dados.ganho, 10);
+    assert.equal(carinho.dados.pokemon.afeto.pontos, 10);
+    assert.ok(new Date(carinho.dados.pokemon.cuidadosDisponiveisEm.carinho) > new Date());
+    assert.equal(carinho.dados.pokemon.cuidadosDisponiveisEm.brincar, null);
+    assert.equal(carinho.dados.pokemon.humor, 65);
+    assert.equal(carinho.dados.pokemon.energia, 50);
+
+    // Dois cliques seguidos: o segundo esbarra na espera
+    const repetido = await api('POST', `/pokemons/${id}/cuidar`, { token: t.ash.token, corpo: { tipo: 'carinho' } });
+    assert.equal(repetido.status, 400);
+    const brincar = await api('POST', `/pokemons/${id}/cuidar`, { token: t.ash.token, corpo: { tipo: 'brincar' } });
+    assert.equal(brincar.status, 200);
+    assert.deepEqual([brincar.dados.pokemon.humor, brincar.dados.pokemon.energia], [90, 25]);
+    assert.equal((await api('POST', `/pokemons/${id}/cuidar`, { token: t.ash.token, corpo: { tipo: 'dormir' } })).status, 400);
+    assert.equal((await api('POST', `/pokemons/${id}/cuidar`, { token: t.gary.token, corpo: { tipo: 'alimentar' } })).status, 400);
+
+    const historico = await api('GET', `/pokemons/${id}/cuidados`, { token: t.ash.token });
+    assert.deepEqual(historico.dados.map((c) => c.tipo), ['brincar', 'carinho']);
+    assert.deepEqual((await api('GET', `/pokemons/${id}/cuidados`, { token: t.gary.token })).dados, []);
+
+    const { dados } = await api('GET', '/eu', { token: t.ash.token });
+    assert.equal(dados.pokemons.find((p) => p.id === id).afeto.pontos, 30);
+  });
+
+  await s.test('vitrine: destaques, visitas e álbum', async () => {
+    // Sem destaques escolhidos, a vitrine mostra o time
+    let { dados } = await api('GET', '/vitrines/ash', { token: t.ash.token });
+    assert.equal(dados.souDono, true);
+    assert.equal(dados.destaques.length, 5);
+    assert.equal(dados.estatisticas.pokemons, 5);
+    assert.ok(dados.colecao.length >= 1);
+
+    const ids = t.ashPokemons.map((p) => p.id).slice(0, 2);
+    const salvar = await api('PUT', '/vitrine', {
+      token: t.ash.token, corpo: { bio: 'Fã de tipo fogo', estilo: 'album', pokemonIds: ids },
+    });
+    assert.equal(salvar.status, 204);
+
+    // Gary visita: conta a visita e não vê IVs
+    ({ dados } = await api('GET', '/vitrines/ASH', { token: t.gary.token }));
+    assert.equal(dados.souDono, false);
+    assert.equal(dados.bio, 'Fã de tipo fogo');
+    assert.equal(dados.estilo, 'album');
+    assert.equal(dados.visitas, 1);
+    assert.deepEqual(dados.destaques.map((p) => p.id), ids);
+    assert.equal(dados.destaques[0].ivs, undefined);
+
+    const lista = await api('GET', '/vitrines', { token: t.gary.token });
+    assert.deepEqual(lista.dados.map((v) => v.login), ['Ash']);
+
+    const doGary = (await api('GET', '/eu', { token: t.gary.token })).dados.pokemons[0].id;
+    assert.equal((await api('PUT', '/vitrine', { token: t.ash.token, corpo: { estilo: 'palco', pokemonIds: [doGary] } })).status, 400);
+    assert.equal((await api('PUT', '/vitrine', { token: t.ash.token, corpo: { estilo: 'neon', pokemonIds: [] } })).status, 400);
+    assert.equal((await api('GET', '/vitrines/ninguem', { token: t.ash.token })).status, 400);
+  });
+
+  await s.test('treinadores ativos nas últimas 24h', async () => {
+    // Sem time completo não aparece
+    await api('POST', '/auth/cadastro', { corpo: { login: 'misty', celular: '11777777777', senha: 'agua12345' } });
+
+    let { dados } = await api('GET', '/treinadores/ativos', { token: t.gary.token });
+    assert.deepEqual(dados.map((d) => d.login), ['Ash']);
+    assert.equal(dados[0].time.length, 5);
+    assert.equal(dados[0].nivelMedio, 1);
+    assert.equal(dados[0].desafioEnviado, false);
+
+    // Quem não entra há mais de 24h some da lista
+    await pool.query("UPDATE usuarios SET ultimo_acesso_em = now() - interval '25 hours' WHERE login = 'Ash'");
+    ({ dados } = await api('GET', '/treinadores/ativos', { token: t.gary.token }));
+    assert.deepEqual(dados, []);
+
+    // ...e volta assim que usa o jogo de novo
+    await api('GET', '/eu', { token: t.ash.token });
+    ({ dados } = await api('GET', '/treinadores/ativos', { token: t.gary.token }));
+    assert.deepEqual(dados.map((d) => d.login), ['Ash']);
+  });
+
   await s.test('desafio: validações', async () => {
     assert.equal((await api('POST', '/batalhas', { token: t.ash.token, corpo: { oponente: 'ash' } })).status, 400);
     assert.equal((await api('POST', '/batalhas', { token: t.ash.token, corpo: { oponente: 'ninguem' } })).status, 400);
@@ -153,6 +234,11 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
     assert.equal(desafio.status, 201);
     assert.equal(desafio.dados.status, 'aguardando');
     assert.equal((await api('POST', '/batalhas', { token: t.ash.token, corpo: { oponente: 'gary' } })).status, 400);
+    // A lista de ativos avisa dos dois lados que há um desafio pendente
+    const doAsh = (await api('GET', '/treinadores/ativos', { token: t.ash.token })).dados;
+    assert.equal(doAsh.find((d) => d.login === 'gary').desafioEnviado, true);
+    const doGary = (await api('GET', '/treinadores/ativos', { token: t.gary.token })).dados;
+    assert.equal(doGary.find((d) => d.login === 'Ash').desafioRecebido, true);
     // Só o desafiado responde
     const r = await api('POST', `/batalhas/${desafio.dados.id}/responder`, { token: t.ash.token, corpo: { aceitar: true } });
     assert.equal(r.status, 400);
@@ -281,6 +367,85 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
     const { dados } = await api('GET', '/batalhas', { token: t.gary.token });
     assert.ok(dados.length >= 7);
     assert.ok(dados.every((b) => b.oponente === 'Ash'));
+  });
+
+  await s.test('trocas: anúncio, compra direta e proposta', async () => {
+    const ash = { token: t.ash.token };
+    const gary = { token: t.gary.token };
+    // Pokémon fora do time para trocar: cada um compra mais 2 na loja (o time já está cheio)
+    await pool.query("UPDATE usuarios SET pokecoins = 1000 WHERE lower(login) IN ('ash', 'gary')");
+    const comprarDois = async (token) => {
+      const ids = [];
+      for (let i = 0; i < 2; i += 1) ids.push((await api('POST', '/loja/comprar', { token })).dados.pokemon.id);
+      return ids;
+    };
+    const [a1, a2] = await comprarDois(ash.token);
+    const [g1, g2] = await comprarDois(gary.token);
+    const timeDoAsh = (await api('GET', '/eu', ash)).dados.pokemons.filter((p) => p.posicaoTime).map((p) => p.id);
+
+    // Validações do anúncio
+    assert.equal((await api('POST', '/anuncios', { ...ash, corpo: { pokemonId: timeDoAsh[0], preco: 10 } })).status, 400);
+    assert.equal((await api('POST', '/anuncios', { ...ash, corpo: { pokemonId: a1 } })).status, 400);
+    assert.equal((await api('POST', '/anuncios', { ...ash, corpo: { pokemonId: g1, preco: 10 } })).status, 400);
+    const anuncio = await api('POST', '/anuncios', { ...ash, corpo: { pokemonId: a1, preco: 50, aceitaPropostas: true } });
+    assert.equal(anuncio.status, 201, JSON.stringify(anuncio.dados));
+    assert.equal((await api('POST', '/anuncios', { ...ash, corpo: { pokemonId: a1, preco: 60 } })).status, 400);
+
+    // Anunciado não entra no time
+    const time = await api('PUT', '/time', { ...ash, corpo: { pokemonIds: [...timeDoAsh.slice(1), a1] } });
+    assert.equal(time.status, 400);
+    assert.match(time.dados.erro, /anunciado/);
+
+    // Mercado: espécie agrupada e o anúncio com o login de quem vende
+    const { especieId } = anuncio.dados.pokemon;
+    const mercado = (await api('GET', '/mercado', gary)).dados;
+    assert.ok(mercado.find((m) => m.especieId === especieId).anuncios >= 1);
+    const lista = (await api('GET', `/mercado/${especieId}`, gary)).dados;
+    const doAsh = lista.find((a) => a.id === anuncio.dados.id);
+    assert.equal(doAsh.vendedor, 'Ash');
+    assert.equal(doAsh.meu, false);
+    assert.equal(doAsh.preco, 50);
+
+    // Compra direta
+    assert.equal((await api('POST', `/anuncios/${anuncio.dados.id}/comprar`, ash)).status, 400);
+    const compra = await api('POST', `/anuncios/${anuncio.dados.id}/comprar`, gary);
+    assert.equal(compra.status, 200, JSON.stringify(compra.dados));
+    assert.equal(compra.dados.id, a1);
+    assert.equal(compra.dados.afeto.pontos, 0);
+    assert.equal(await saldo(ash.token), 1000 - 200 + 50);
+    assert.equal(await saldo(gary.token), 1000 - 200 - 50);
+    assert.ok((await api('GET', '/eu', gary)).dados.pokemons.some((p) => p.id === a1));
+    assert.equal((await api('POST', `/anuncios/${anuncio.dados.id}/comprar`, gary)).status, 400);
+
+    // Proposta: Gary anuncia só para propostas, Ash oferece um Pokémon + 10 Pokécoins
+    const deGary = (await api('POST', '/anuncios', { ...gary, corpo: { pokemonId: g1, aceitaPropostas: true } })).dados;
+    assert.equal((await api('POST', `/anuncios/${deGary.id}/comprar`, ash)).status, 400);
+    const proposta = await api('POST', `/anuncios/${deGary.id}/propostas`, { ...ash, corpo: { pokemonIds: [a2], pokecoins: 10 } });
+    assert.equal(proposta.status, 201, JSON.stringify(proposta.dados));
+    assert.equal((await api('POST', `/anuncios/${deGary.id}/propostas`, { ...ash, corpo: { pokecoins: 5 } })).status, 400);
+    assert.equal((await api('POST', `/anuncios/${deGary.id}/propostas`, { ...ash, corpo: { pokemonIds: [g2] } })).status, 400);
+
+    const { recebidas } = (await api('GET', '/propostas', gary)).dados;
+    assert.equal(recebidas[0].alvo.id, g1);
+    assert.deepEqual(recebidas[0].oferta.map((p) => p.id), [a2]);
+    assert.equal(recebidas[0].pokecoins, 10);
+    assert.equal(recebidas[0].proponente, 'Ash');
+
+    const saldos = [await saldo(ash.token), await saldo(gary.token)];
+    assert.equal((await api('POST', `/propostas/${proposta.dados.id}/aceitar`, ash)).status, 400);
+    assert.equal((await api('POST', `/propostas/${proposta.dados.id}/aceitar`, gary)).status, 204);
+    assert.ok((await api('GET', '/eu', ash)).dados.pokemons.some((p) => p.id === g1));
+    assert.ok((await api('GET', '/eu', gary)).dados.pokemons.some((p) => p.id === a2));
+    assert.deepEqual([await saldo(ash.token), await saldo(gary.token)], [saldos[0] - 10, saldos[1] + 10]);
+    assert.equal((await api('GET', '/propostas', ash)).dados.enviadas[0].status, 'aceita');
+
+    // Recusar
+    const outro = (await api('POST', '/anuncios', { ...gary, corpo: { pokemonId: g2, aceitaPropostas: true } })).dados;
+    const pedido = (await api('POST', `/anuncios/${outro.id}/propostas`, { ...ash, corpo: { pokecoins: 5 } })).dados;
+    assert.equal((await api('POST', `/propostas/${pedido.id}/recusar`, gary)).status, 204);
+    assert.equal((await api('GET', '/propostas', ash)).dados.enviadas[0].status, 'recusada');
+    assert.equal((await api('DELETE', `/anuncios/${outro.id}`, gary)).status, 204);
+    assert.equal((await api('GET', '/anuncios/meus', gary)).dados.length, 0);
   });
 
   await s.test('sair e redefinir senha derrubam a sessão', async () => {

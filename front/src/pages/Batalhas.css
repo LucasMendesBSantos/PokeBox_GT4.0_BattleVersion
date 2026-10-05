@@ -87,6 +87,78 @@
   border-left-color: #999;
 }
 
+/* Treinadores ativos nas últimas 24h */
+.batalhas-ativos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.batalhas-ativo {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 3px solid var(--poke-ink);
+  border-radius: 14px;
+}
+
+.batalhas-ativo-info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.batalhas-ativo-info strong {
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.batalhas-ativo-info span,
+.batalhas-ativo-status {
+  font-size: 13px;
+  color: #555;
+}
+
+.batalhas-ativo-status {
+  font-weight: 700;
+  text-align: right;
+}
+
+.batalhas-ativo-time {
+  display: flex;
+  grid-column: 1;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.batalhas-ativo-time li {
+  width: 40px;
+  height: 40px;
+  background: #f2f4f8;
+  border: 2px solid var(--poke-ink);
+  border-radius: 50%;
+}
+
+.batalhas-ativo-time img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.batalhas-ativo > button,
+.batalhas-ativo-status {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+}
+
 .batalhas-botoes {
   display: flex;
   gap: 8px;

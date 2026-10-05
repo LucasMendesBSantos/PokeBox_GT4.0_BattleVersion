@@ -3,11 +3,22 @@ const express = require('express');
 const usuarios = require('./jogo/usuarios');
 const pokemons = require('./jogo/pokemons');
 const batalhas = require('./jogo/batalhas');
+const vitrines = require('./jogo/vitrines');
+const trocas = require('./jogo/trocas');
+const config = require('./jogo/config');
 const { ErroJogo } = require('./jogo/erros');
 
 const LOGIN_MAXIMO = 20;
 const SENHA_MINIMA = 8;
 const CELULAR = /^\d{11}$/;
+
+// Códigos de erro do Node/PostgreSQL que significam "não deu para usar o banco"
+const ERROS_BANCO = new Set([
+  'ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', // servidor não responde
+  '28P01', '28000', // usuário/senha recusados
+  '3D000', // banco não existe
+  '42P01', // tabela não existe (db.sql não foi rodado)
+]);
 
 const router = express.Router();
 // Aqui dentro (e não no app) para o erro de JSON inválido cair no tratamento de erros deste router
@@ -139,9 +150,118 @@ router.post('/pokemons/:id/evoluir', autenticar, async (req, res) => {
   ));
 });
 
+router.post('/pokemons/:id/cuidar', autenticar, async (req, res) => {
+  const { tipo } = req.body;
+  if (!Object.hasOwn(config.CUIDADOS, tipo)) throw new ErroJogo('Cuidado inválido.');
+  res.json(await pokemons.cuidar(req.usuario.id, inteiro(req.params.id, 'Pokémon'), tipo));
+});
+
+router.get('/pokemons/:id/cuidados', autenticar, async (req, res) => {
+  res.json(await pokemons.listarCuidados(req.usuario.id, inteiro(req.params.id, 'Pokémon')));
+});
+
+// ---------------------------------------------------------------------------
+// Trocas
+// ---------------------------------------------------------------------------
+
+const opcao = (valor, opcoes, padrao) => (Object.hasOwn(opcoes, valor) ? valor : padrao);
+
+router.get('/mercado', autenticar, async (req, res) => {
+  const busca = typeof req.query.busca === 'string' ? req.query.busca.trim().slice(0, 40) : '';
+  res.json(await trocas.listarMercado(busca, opcao(req.query.ordem, trocas.ORDENS_MERCADO, 'popularidade')));
+});
+
+router.get('/mercado/:especieId', autenticar, async (req, res) => {
+  res.json(await trocas.listarAnunciosDaEspecie(
+    req.usuario.id,
+    inteiro(req.params.especieId, 'Espécie'),
+    opcao(req.query.ordem, trocas.ORDENS_ANUNCIOS, 'preco'),
+  ));
+});
+
+router.get('/anuncios/meus', autenticar, async (req, res) => {
+  res.json(await trocas.listarMeusAnuncios(req.usuario.id));
+});
+
+router.post('/anuncios', autenticar, async (req, res) => {
+  const { preco = null, aceitaPropostas = false } = req.body;
+  res.status(201).json(await trocas.criarAnuncio(req.usuario.id, {
+    pokemonId: inteiro(req.body.pokemonId, 'Pokémon'),
+    preco: preco === null ? null : Number(preco),
+    aceitaPropostas: aceitaPropostas === true,
+  }));
+});
+
+router.delete('/anuncios/:id', autenticar, async (req, res) => {
+  await trocas.cancelarAnuncio(req.usuario.id, inteiro(req.params.id, 'Anúncio'));
+  res.status(204).end();
+});
+
+router.post('/anuncios/:id/comprar', autenticar, async (req, res) => {
+  res.json(await trocas.comprar(req.usuario.id, inteiro(req.params.id, 'Anúncio')));
+});
+
+router.post('/anuncios/:id/propostas', autenticar, async (req, res) => {
+  const { pokemonIds = [], pokecoins = 0 } = req.body;
+  if (!Array.isArray(pokemonIds)) throw new ErroJogo('Envie a lista pokemonIds.');
+  res.status(201).json(await trocas.proporTroca(req.usuario.id, inteiro(req.params.id, 'Anúncio'), {
+    pokemonIds: pokemonIds.map((id) => inteiro(id, 'Pokémon')),
+    pokecoins: Number(pokecoins),
+  }));
+});
+
+router.get('/propostas', autenticar, async (req, res) => {
+  res.json(await trocas.listarPropostas(req.usuario.id));
+});
+
+router.post('/propostas/:id/aceitar', autenticar, async (req, res) => {
+  await trocas.aceitarProposta(req.usuario.id, inteiro(req.params.id, 'Proposta'));
+  res.status(204).end();
+});
+
+router.post('/propostas/:id/recusar', autenticar, async (req, res) => {
+  await trocas.recusarProposta(req.usuario.id, inteiro(req.params.id, 'Proposta'));
+  res.status(204).end();
+});
+
+router.delete('/propostas/:id', autenticar, async (req, res) => {
+  await trocas.cancelarProposta(req.usuario.id, inteiro(req.params.id, 'Proposta'));
+  res.status(204).end();
+});
+
+// ---------------------------------------------------------------------------
+// Vitrine
+// ---------------------------------------------------------------------------
+
+router.get('/vitrines', autenticar, async (req, res) => {
+  const busca = typeof req.query.busca === 'string' ? req.query.busca.trim().slice(0, LOGIN_MAXIMO) : '';
+  res.json(await vitrines.listarVitrines(req.usuario.id, busca));
+});
+
+router.get('/vitrines/:login', autenticar, async (req, res) => {
+  res.json(await vitrines.obterVitrine(req.usuario.id, texto(req.params.login, 'o treinador').slice(0, LOGIN_MAXIMO)));
+});
+
+router.put('/vitrine', autenticar, async (req, res) => {
+  const { bio = '', estilo, pokemonIds } = req.body;
+  if (typeof bio !== 'string') throw new ErroJogo('Apresentação inválida.');
+  if (!Array.isArray(pokemonIds)) throw new ErroJogo('Envie a lista pokemonIds.');
+  await vitrines.salvarVitrine(req.usuario.id, {
+    bio: bio.trim(),
+    estilo,
+    pokemonIds: pokemonIds.map((id) => inteiro(id, 'Pokémon')),
+  });
+  res.status(204).end();
+});
+
 router.get('/treinadores', autenticar, async (req, res) => {
   const busca = typeof req.query.busca === 'string' ? req.query.busca.trim().slice(0, LOGIN_MAXIMO) : '';
   res.json(busca ? await usuarios.buscarTreinadores(req.usuario.id, busca) : []);
+});
+
+// Quem entrou no jogo nas últimas 24h e pode ser desafiado (time completo)
+router.get('/treinadores/ativos', autenticar, async (req, res) => {
+  res.json(await usuarios.listarTreinadoresAtivos(req.usuario.id));
 });
 
 // ---------------------------------------------------------------------------
@@ -189,6 +309,14 @@ router.use((erro, req, res, next) => {
   }
   if (erro.type === 'entity.parse.failed') {
     res.status(400).json({ erro: 'JSON inválido.' });
+    return;
+  }
+  // Banco fora do ar, DATABASE_URL faltando/errada ou db.sql não aplicado
+  if (ERROS_BANCO.has(erro.code)) {
+    // ECONNREFUSED chega como AggregateError, com a mensagem vazia
+    console.error(`Banco de dados indisponível (${erro.code}${erro.message ? `: ${erro.message}` : ''}). `
+      + 'Confira o DATABASE_URL em back/.env e se o banco está rodando (docker compose up -d db).');
+    res.status(503).json({ erro: 'O banco de dados está fora do ar. Tente de novo em instantes.' });
     return;
   }
   console.error(erro);
