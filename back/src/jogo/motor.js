@@ -46,7 +46,7 @@ const { ErroJogo } = require('./erros');
  */
 
 /**
- * Monta um lado da batalha a partir do time do jogador (já na ordem das posições 1 a 5).
+ * Monta um lado da batalha a partir do time do jogador (já na ordem das posições 1 a TAMANHO_TIME).
  * @param {{ id: number, login: string }} usuario
  * @param {{ pokemon: import('./regras').Pokemon & { id: number, mint_numero: number }, especie: import('./regras').Especie }[]} time
  * @returns {Lado}

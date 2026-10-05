@@ -9,7 +9,7 @@ function lado(usuarioId, velocidadeBase = 50, afeto = 0) {
   const especie = {
     id: 1, nome: 'teste', hp_base: 50, ataque_base: 50, defesa_base: 50, velocidade_base: velocidadeBase,
   };
-  const time = [1, 2, 3, 4, 5].map((i) => ({
+  const time = [1, 2, 3].map((i) => ({
     especie,
     pokemon: {
       id: usuarioId * 10 + i, mint_numero: i, shiny: false, nivel: 50,
@@ -61,8 +61,8 @@ test('trocar valida o Pokémon escolhido', () => {
   const estado = criarEstado(lado(1, 90), lado(2));
   assert.throws(() => aplicarAcao(estado, 0, { tipo: 'trocar', indice: 0 }), /já está em campo/);
   assert.throws(() => aplicarAcao(estado, 0, { tipo: 'trocar', indice: 9 }), /inválido/);
-  const { estado: novo } = aplicarAcao(estado, 0, { tipo: 'trocar', indice: 3 });
-  assert.equal(novo.lados[0].ativo, 3);
+  const { estado: novo } = aplicarAcao(estado, 0, { tipo: 'trocar', indice: 2 });
+  assert.equal(novo.lados[0].ativo, 2);
 });
 
 test('desistir funciona fora da vez e dá a vitória ao oponente', () => {

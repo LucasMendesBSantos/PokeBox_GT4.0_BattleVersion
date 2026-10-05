@@ -6,7 +6,7 @@ import { formatarNome, formatarNumero } from '../components/tipos';
 import { urlArtwork } from '../services/pokeapi';
 import './Time.css';
 
-const TAMANHO_TIME = 5;
+const TAMANHO_TIME = 3;
 
 const timeAtual = (pokemons) => pokemons
   .filter((p) => p.posicaoTime)

@@ -169,7 +169,7 @@ function Batalhas({ temTime, onAbrir, onAtualizarUsuario }) {
             Desafiar
           </button>
         </div>
-        {!temTime && <p className="batalhas-dica">Monte um time com 5 Pokémon para poder desafiar.</p>}
+        {!temTime && <p className="batalhas-dica">Monte um time com 3 Pokémon para poder desafiar.</p>}
       </form>
 
       {erro && <p className="jogo-erro" role="alert">{erro}</p>}

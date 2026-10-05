@@ -4,12 +4,23 @@ const HORA_MS = 60 * 60 * 1000;
 
 module.exports = {
   // Economia
-  POKECOINS_CADASTRO: 400,
+  POKECOINS_CADASTRO: 600,
   PRECO_POKEMON_LOJA: 100,
-  TAMANHO_TIME: 5,
+  TAMANHO_TIME: 3,
 
-  // Espécies que a loja pode sortear (ids da PokeAPI: 1 = Bulbasaur ... 1025 = Pecharunt)
-  ULTIMA_ESPECIE: 1025,
+  // Uma loja por geração: cada uma sorteia entre as espécies do seu intervalo de ids da PokeAPI.
+  // Mesma lista da tela da loja (front/src/pages/Loja.jsx)
+  GERACOES: [
+    { numero: 1, regiao: 'Kanto', primeira: 1, ultima: 151 },
+    { numero: 2, regiao: 'Johto', primeira: 152, ultima: 251 },
+    { numero: 3, regiao: 'Hoenn', primeira: 252, ultima: 386 },
+    { numero: 4, regiao: 'Sinnoh', primeira: 387, ultima: 493 },
+    { numero: 5, regiao: 'Unova', primeira: 494, ultima: 649 },
+    { numero: 6, regiao: 'Kalos', primeira: 650, ultima: 721 },
+    { numero: 7, regiao: 'Alola', primeira: 722, ultima: 809 },
+    { numero: 8, regiao: 'Galar', primeira: 810, ultima: 905 },
+    { numero: 9, regiao: 'Paldea', primeira: 906, ultima: 1025 },
+  ],
   // A loja sorteia uma espécie e aceita com esta chance; se recusar, sorteia de novo.
   // Na prática lendários saem ~10x menos que um comum e míticos ~20x menos.
   PESO_RARIDADE: { comum: 1, lendario: 0.1, mitico: 0.05 },

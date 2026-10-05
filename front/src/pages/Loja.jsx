@@ -6,24 +6,39 @@ import './Loja.css';
 
 const PRECO = 100;
 
+// Uma loja por geração, cada uma sorteia só entre as espécies do seu intervalo.
+// Mesma lista do back (back/src/jogo/config.js, GERACOES)
+const GERACOES = [
+  { numero: 1, regiao: 'Kanto', primeira: 1, ultima: 151 },
+  { numero: 2, regiao: 'Johto', primeira: 152, ultima: 251 },
+  { numero: 3, regiao: 'Hoenn', primeira: 252, ultima: 386 },
+  { numero: 4, regiao: 'Sinnoh', primeira: 387, ultima: 493 },
+  { numero: 5, regiao: 'Unova', primeira: 494, ultima: 649 },
+  { numero: 6, regiao: 'Kalos', primeira: 650, ultima: 721 },
+  { numero: 7, regiao: 'Alola', primeira: 722, ultima: 809 },
+  { numero: 8, regiao: 'Galar', primeira: 810, ultima: 905 },
+  { numero: 9, regiao: 'Paldea', primeira: 906, ultima: 1025 },
+];
+
 function Loja({ usuario, onComprar }) {
-  const [comprando, setComprando] = useState(false);
+  // Número da geração em sorteio agora (null quando nenhuma)
+  const [comprando, setComprando] = useState(null);
   const [erro, setErro] = useState(null);
   // Os cards comprados nesta visita, do mais novo para o mais antigo
   const [comprados, setComprados] = useState([]);
 
   const podeComprar = usuario.pokecoins >= PRECO;
 
-  const handleComprar = async () => {
-    setComprando(true);
+  const handleComprar = async (numeroGeracao) => {
+    setComprando(numeroGeracao);
     setErro(null);
     try {
-      const { pokemon } = await onComprar();
+      const { pokemon } = await onComprar(numeroGeracao);
       setComprados((atual) => [pokemon, ...atual]);
     } catch (e) {
       setErro(e.message);
     } finally {
-      setComprando(false);
+      setComprando(null);
     }
   };
 
@@ -33,30 +48,43 @@ function Loja({ usuario, onComprar }) {
     <section className="loja">
       <h1 className="jogo-titulo">Loja</h1>
       <p className="jogo-texto">
+        Uma loja por geração: cada uma sorteia só entre os Pokémon dela.
         Cada Pokémon é sorteado na hora e é único: IVs, altura, peso e a chance de 1% de ser shiny.
         Lendários e míticos também podem aparecer, mas são bem mais raros.
       </p>
 
-      <div className="loja-balcao jogo-painel">
-        <div className="loja-pokebola" aria-hidden="true" data-girando={comprando} />
-        <div className="loja-balcao-texto">
-          <p className="loja-preco">{`Pokémon aleatório: ${PRECO} Pokécoins`}</p>
-          <p className="loja-saldo">{`Seu saldo: ${usuario.pokecoins} Pokécoins`}</p>
-          <button
-            type="button"
-            className="jogo-botao"
-            onClick={handleComprar}
-            disabled={!podeComprar || comprando}
-          >
-            {comprando ? 'Sorteando...' : 'Comprar'}
-          </button>
-          {!podeComprar && (
-            <p className="loja-dica">
-              Sem Pokécoins suficientes. Batalhe para ganhar mais: +40 na vitória e +10 na derrota.
-            </p>
-          )}
-        </div>
+      <div className="loja-resumo">
+        <p className="loja-preco">{`Cada Pokémon: ${PRECO} Pokécoins`}</p>
+        <p className="loja-saldo">{`Seu saldo: ${usuario.pokecoins} Pokécoins`}</p>
+        {!podeComprar && (
+          <p className="loja-dica">
+            Sem Pokécoins suficientes. Batalhe para ganhar mais: +40 na vitória e +10 na derrota.
+          </p>
+        )}
       </div>
+
+      <ul className="loja-geracoes">
+        {GERACOES.map((g) => {
+          const sorteando = comprando === g.numero;
+          return (
+            <li key={g.numero} className="loja-geracao jogo-painel">
+              <div className="loja-pokebola" aria-hidden="true" data-girando={sorteando} />
+              <p className="loja-geracao-numero">{`Geração ${g.numero}`}</p>
+              <h2 className="loja-nome">{g.regiao}</h2>
+              <p className="loja-intervalo">{`${formatarNumero(g.primeira)} a ${formatarNumero(g.ultima)}`}</p>
+              <button
+                type="button"
+                className="jogo-botao"
+                onClick={() => handleComprar(g.numero)}
+                disabled={!podeComprar || comprando !== null}
+                aria-label={`Comprar Pokémon da geração ${g.numero} (${g.regiao})`}
+              >
+                {sorteando ? 'Sorteando...' : 'Comprar'}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
 
       {erro && <p className="jogo-erro" role="alert">{erro}</p>}
 

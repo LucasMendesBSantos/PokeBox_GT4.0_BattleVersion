@@ -92,7 +92,7 @@ export const redefinirSenha = (dados) => chamar('POST', '/auth/redefinir-senha',
 // Coleção, loja e time
 export const buscarEu = () => chamar('GET', '/eu');
 export const escolherInicial = (especieId) => chamar('POST', '/eu/inicial', { especieId });
-export const comprarPokemon = () => chamar('POST', '/loja/comprar');
+export const comprarPokemon = (geracao) => chamar('POST', '/loja/comprar', { geracao });
 export const salvarTime = (pokemonIds) => chamar('PUT', '/time', { pokemonIds });
 export const evoluir = (pokemonId, especieId) => chamar('POST', `/pokemons/${pokemonId}/evoluir`, { especieId });
 export const cuidar = (pokemonId, tipo) => chamar('POST', `/pokemons/${pokemonId}/cuidar`, { tipo });

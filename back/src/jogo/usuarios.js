@@ -208,29 +208,33 @@ async function escolherInicial(usuarioId, especieId) {
 }
 
 /**
- * Sorteia a espécie da loja. Cada sorteio é aceito com a chance da raridade
+ * Sorteia a espécie na loja da geração. Cada sorteio é aceito com a chance da raridade
  * (PESO_RARIDADE): quase sempre um comum sai de primeira, lendários e míticos
  * costumam ser recusados e sorteados de novo.
  */
-async function sortearEspecieDaLoja(rng) {
+async function sortearEspecieDaLoja(geracao, rng) {
   for (let tentativa = 0; tentativa < 100; tentativa += 1) {
-    const especie = await garantirEspecie(inteiroEntre(rng, 1, config.ULTIMA_ESPECIE));
+    const especie = await garantirEspecie(inteiroEntre(rng, geracao.primeira, geracao.ultima));
     if (rng() < config.PESO_RARIDADE[especie.raridade]) return especie;
   }
   throw new Error('A loja não conseguiu sortear um Pokémon.');
 }
 
 /**
- * Compra um Pokémon aleatório. Se ainda houver vaga no time, ele já entra.
+ * Compra um Pokémon aleatório da geração escolhida. Se ainda houver vaga no time, ele já entra.
  * @param {number} usuarioId
+ * @param {number} numeroGeracao  1 a 9
  */
-async function comprarPokemonAleatorio(usuarioId, rng = rngSeguro) {
+async function comprarPokemonAleatorio(usuarioId, numeroGeracao, rng = rngSeguro) {
+  const geracao = config.GERACOES.find((g) => g.numero === numeroGeracao);
+  if (!geracao) throw new ErroJogo('Geração inválida.');
+
   // Confere o saldo antes de gastar tempo com a PokeAPI (o débito de verdade é conferido de novo abaixo)
   const { rows } = await pool.query('SELECT pokecoins FROM usuarios WHERE id = $1', [usuarioId]);
   if (!rows[0] || rows[0].pokecoins < config.PRECO_POKEMON_LOJA) throw new ErroJogo('Pokécoins insuficientes.');
 
   // Sorteia e busca a espécie antes da transação (a PokeAPI pode demorar)
-  const especie = await sortearEspecieDaLoja(rng);
+  const especie = await sortearEspecieDaLoja(geracao, rng);
 
   return transacao(async (client) => {
     // Débito condicional: se o saldo não cobre, nenhuma linha é alterada.
@@ -248,7 +252,7 @@ async function comprarPokemonAleatorio(usuarioId, rng = rngSeguro) {
       [usuarioId, -config.PRECO_POKEMON_LOJA],
     );
 
-    // Primeira posição livre do time (1 a 5), ou null se o time está cheio
+    // Primeira posição livre do time (1 a TAMANHO_TIME), ou null se o time está cheio
     const vaga = await client.query(
       `SELECT MIN(pos) AS posicao
          FROM generate_series(1, $2::int) AS pos

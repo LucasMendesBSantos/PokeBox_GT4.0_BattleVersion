@@ -133,7 +133,7 @@ router.post('/eu/inicial', autenticar, async (req, res) => {
 });
 
 router.post('/loja/comprar', autenticar, async (req, res) => {
-  res.status(201).json(await usuarios.comprarPokemonAleatorio(req.usuario.id));
+  res.status(201).json(await usuarios.comprarPokemonAleatorio(req.usuario.id, inteiro(req.body.geracao, 'Geração')));
 });
 
 router.put('/time', autenticar, async (req, res) => {

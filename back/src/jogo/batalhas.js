@@ -203,7 +203,7 @@ async function calcularPremio(client, { usuarioId, oponenteId, base, jogadasManu
   return { ...base, semRecompensa: null };
 }
 
-/** Pokécoins para os jogadores e XP para os 5 Pokémon de cada time */
+/** Pokécoins para os jogadores e XP para os Pokémon do time de cada um */
 async function distribuirRecompensas(client, batalhaId, estado, fim) {
   const { rows: [{ total: jogadasManuais }] } = await client.query(
     `SELECT count(*) AS total FROM batalha_acoes

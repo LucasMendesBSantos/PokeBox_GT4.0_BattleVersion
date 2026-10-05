@@ -84,7 +84,7 @@ CREATE TABLE pokemons (
   xp                   INTEGER NOT NULL DEFAULT 0 CHECK (xp >= 0),  -- XP acumulado dentro do nível atual
 
   -- Posição no time de batalha (1 a 5) ou NULL se está só na coleção
-  posicao_time         SMALLINT CHECK (posicao_time BETWEEN 1 AND 5),
+  posicao_time         SMALLINT CHECK (posicao_time BETWEEN 1 AND 3),
 
   -- Pontos de afeto com o dono (carinho, brincar, alimentar). 100 pontos = 1 coração.
   -- Fica no card, então é mantido ao evoluir.

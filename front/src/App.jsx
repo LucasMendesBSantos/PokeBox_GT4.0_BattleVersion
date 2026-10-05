@@ -13,7 +13,7 @@ import Vitrine from './pages/Vitrine';
 import Trocas from './pages/Trocas';
 import * as api from './services/api';
 
-const TAMANHO_TIME = 5;
+const TAMANHO_TIME = 3;
 
 function App() {
   const [tela, setTela] = useState('login');
@@ -143,8 +143,8 @@ function App() {
     loja: () => (
       <Loja
         usuario={usuario}
-        onComprar={async () => {
-          const compra = await api.comprarPokemon();
+        onComprar={async (geracao) => {
+          const compra = await api.comprarPokemon(geracao);
           await recarregarUsuario();
           return compra;
         }}

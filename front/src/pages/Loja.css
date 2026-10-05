@@ -1,19 +1,56 @@
-.loja-balcao {
+.loja-resumo {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 24px;
-  max-width: 560px;
+  align-items: baseline;
+  gap: 4px 20px;
+  margin-bottom: 20px;
+}
+
+.loja-resumo .loja-dica {
+  flex-basis: 100%;
+}
+
+.loja-geracoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.loja-geracao {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.loja-geracao .loja-pokebola {
+  margin-bottom: 8px;
+}
+
+.loja-geracao .jogo-botao {
+  margin-top: 8px;
+}
+
+.loja-geracao-numero {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--poke-navy);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 /* Pokébola desenhada em CSS; gira enquanto o sorteio acontece */
 .loja-pokebola {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 64px;
+  height: 64px;
   flex-shrink: 0;
   background: linear-gradient(to bottom, var(--dex-red) 0 46%, var(--poke-ink) 46% 54%, #fff 54%);
-  border: 4px solid var(--poke-ink);
+  border: 3px solid var(--poke-ink);
   border-radius: 50%;
 }
 
@@ -22,10 +59,10 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 26px;
-  height: 26px;
+  width: 18px;
+  height: 18px;
   background: #fff;
-  border: 4px solid var(--poke-ink);
+  border: 3px solid var(--poke-ink);
   border-radius: 50%;
   transform: translate(-50%, -50%);
 }
@@ -43,16 +80,23 @@
   .loja-pokebola[data-girando='true'] { animation: none; }
 }
 
-.loja-balcao-texto {
-  display: grid;
-  gap: 8px;
-  justify-items: start;
-}
-
+.loja-nome,
+.loja-intervalo,
 .loja-preco,
 .loja-saldo,
 .loja-dica {
   margin: 0;
+}
+
+.loja-nome {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--poke-navy);
+}
+
+.loja-intervalo {
+  font-size: 14px;
+  color: #555;
 }
 
 .loja-preco {

@@ -82,7 +82,7 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
     const conta = { login: 'Ash', celular: '11999999999', senha: 'pikachu123' };
     const cadastro = await api('POST', '/auth/cadastro', { corpo: conta });
     assert.equal(cadastro.status, 201);
-    assert.equal(cadastro.dados.usuario.pokecoins, 400);
+    assert.equal(cadastro.dados.usuario.pokecoins, 600);
     t.ash = { token: cadastro.dados.token };
 
     const repetido = await api('POST', '/auth/cadastro', { corpo: { ...conta, login: 'ASH' } });
@@ -110,22 +110,36 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
     assert.equal((await api('POST', '/eu/inicial', { token: t.gary.token, corpo: { especieId: 7 } })).status, 201);
   });
 
-  await s.test('loja: 4 compras com 400 Pokécoins e o time se completa', async () => {
-    // Ash compra 5 ao mesmo tempo: o débito atômico só deixa passar 4
-    const compras = await Promise.all(
-      [1, 2, 3, 4, 5].map(() => api('POST', '/loja/comprar', { token: t.ash.token })),
-    );
-    assert.deepEqual(compras.map((c) => c.status).sort(), [201, 201, 201, 201, 400]);
-    assert.equal(await saldo(t.ash.token), 0);
+  await s.test('loja: 2 compras com 200 Pokécoins e o time se completa', async () => {
+    // Saldo para exatamente 2 compras: o inicial + 2 fecham o time de 3
+    await pool.query("UPDATE usuarios SET pokecoins = 200 WHERE lower(login) IN ('ash', 'gary')");
+    // Geração inexistente ou ausente: recusa sem cobrar
+    for (const corpo of [{ geracao: 10 }, { geracao: 0 }, {}]) {
+      assert.equal((await api('POST', '/loja/comprar', { token: t.ash.token, corpo })).status, 400);
+    }
+    assert.equal(await saldo(t.ash.token), 200);
 
-    for (let i = 0; i < 4; i += 1) {
-      assert.equal((await api('POST', '/loja/comprar', { token: t.gary.token })).status, 201);
+    // Ash compra 3 ao mesmo tempo na loja 1: o débito atômico só deixa passar 2
+    const compras = await Promise.all(
+      [1, 2, 3].map(() => api('POST', '/loja/comprar', { token: t.ash.token, corpo: { geracao: 1 } })),
+    );
+    assert.deepEqual(compras.map((c) => c.status).sort(), [201, 201, 400]);
+    assert.equal(await saldo(t.ash.token), 0);
+    for (const c of compras.filter((x) => x.status === 201)) {
+      assert.ok(c.dados.pokemon.especieId >= 1 && c.dados.pokemon.especieId <= 151, 'loja 1 só sorteia Kanto');
+    }
+
+    // Gary compra na loja 9 (Paldea)
+    for (let i = 0; i < 2; i += 1) {
+      const compra = await api('POST', '/loja/comprar', { token: t.gary.token, corpo: { geracao: 9 } });
+      assert.equal(compra.status, 201);
+      assert.ok(compra.dados.pokemon.especieId >= 906 && compra.dados.pokemon.especieId <= 1025, 'loja 9 só sorteia Paldea');
     }
 
     const { dados } = await api('GET', '/eu', { token: t.ash.token });
-    assert.equal(dados.pokemons.length, 5);
-    assert.deepEqual(dados.pokemons.map((p) => p.posicaoTime).sort(), [1, 2, 3, 4, 5]);
-    assert.equal(new Set(dados.pokemons.map((p) => p.mintNumero)).size, 5);
+    assert.equal(dados.pokemons.length, 3);
+    assert.deepEqual(dados.pokemons.map((p) => p.posicaoTime).sort(), [1, 2, 3]);
+    assert.equal(new Set(dados.pokemons.map((p) => p.mintNumero)).size, 3);
     for (const p of dados.pokemons) {
       assert.ok(Object.values(p.ivs).every((iv) => iv >= 0 && iv <= 31));
       assert.ok(['comum', 'lendario', 'mitico'].includes(p.raridade));
@@ -178,8 +192,8 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
     // Sem destaques escolhidos, a vitrine mostra o time
     let { dados } = await api('GET', '/vitrines/ash', { token: t.ash.token });
     assert.equal(dados.souDono, true);
-    assert.equal(dados.destaques.length, 5);
-    assert.equal(dados.estatisticas.pokemons, 5);
+    assert.equal(dados.destaques.length, 3);
+    assert.equal(dados.estatisticas.pokemons, 3);
     assert.ok(dados.colecao.length >= 1);
 
     const ids = t.ashPokemons.map((p) => p.id).slice(0, 2);
@@ -212,7 +226,7 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
 
     let { dados } = await api('GET', '/treinadores/ativos', { token: t.gary.token });
     assert.deepEqual(dados.map((d) => d.login), ['Ash']);
-    assert.equal(dados[0].time.length, 5);
+    assert.equal(dados[0].time.length, 3);
     assert.equal(dados[0].nivelMedio, 1);
     assert.equal(dados[0].desafioEnviado, false);
 
@@ -272,8 +286,8 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
 
     const { dados } = await api('GET', `/batalhas/${t.primeiroDesafio}`, { token: vencedor.token });
     assert.equal(dados.batalha.minhasRecompensas.pokecoins, 40);
-    assert.equal(dados.batalha.minhasRecompensas.subiram.length, 5);
-    assert.ok(dados.acoes.length >= 10);
+    assert.equal(dados.batalha.minhasRecompensas.subiram.length, 3);
+    assert.ok(dados.acoes.length >= 6);
 
     // Batalha acabada não aceita jogada
     assert.equal((await api('POST', `/batalhas/${t.primeiroDesafio}/jogadas`, { token: vencedor.token, corpo: { tipo: 'atacar' } })).status, 400);
@@ -376,7 +390,7 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
     await pool.query("UPDATE usuarios SET pokecoins = 1000 WHERE lower(login) IN ('ash', 'gary')");
     const comprarDois = async (token) => {
       const ids = [];
-      for (let i = 0; i < 2; i += 1) ids.push((await api('POST', '/loja/comprar', { token })).dados.pokemon.id);
+      for (let i = 0; i < 2; i += 1) ids.push((await api('POST', '/loja/comprar', { token, corpo: { geracao: 2 } })).dados.pokemon.id);
       return ids;
     };
     const [a1, a2] = await comprarDois(ash.token);
