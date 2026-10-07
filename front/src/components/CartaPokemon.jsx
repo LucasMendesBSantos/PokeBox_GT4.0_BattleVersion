@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { urlArtwork } from '../services/pokeapi';
 import Coracoes from './Coracoes';
-import { formatoPokemon } from './formatos';
+import { formatoPokemon, resumoEvolucao } from './formatos';
 import { dadosTipo, formatarNome, formatarNumero } from './tipos';
 import './CartaPokemon.css';
 
@@ -32,6 +32,7 @@ function CartaPokemon({
   const cor = dadosTipo(pokemon.tipos[0]).cor;
   const porcentagemXp = pokemon.xpParaSubir ? Math.min(pokemon.xp / pokemon.xpParaSubir, 1) * 100 : 100;
   const nome = formatarNome(pokemon.nome);
+  const evolucao = resumoEvolucao(pokemon);
 
   return (
     <article
@@ -78,6 +79,10 @@ function CartaPokemon({
         </span>
       </div>
 
+      {compacto && evolucao && (
+        <p className="carta-evolucao-resumo" data-pronto={evolucao.pronto}>{evolucao.texto}</p>
+      )}
+
       <div className="carta-afeto">
         <Coracoes quantidade={pokemon.afeto.coracoes} tamanho={compacto ? 'pequeno' : 'normal'} />
         {pokemon.afeto.bonusStatus > 0 && (
@@ -101,6 +106,11 @@ function CartaPokemon({
                 <dt>{rotulo}</dt>
                 <dd>
                   {pokemon.status[chave]}
+                  {pokemon.bonusEvolucao?.[chave] > 0 && (
+                    <span className="carta-bonus-evolucao" title="Pontos extras ganhos ao evoluir (já somados)">
+                      {`+${pokemon.bonusEvolucao[chave]} evo`}
+                    </span>
+                  )}
                   <span className={`carta-iv${pokemon.ivs[chave] >= IV_ALTO ? ' carta-iv--alto' : ''}`}>
                     {`IV ${pokemon.ivs[chave]}`}
                   </span>

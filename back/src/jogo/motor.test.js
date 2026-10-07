@@ -123,3 +123,77 @@ test('a resistência do afeto só acontece uma vez por batalha e só com afeto m
   const { eventos } = aplicarAcao(quaseNocauteado(499), 0, { tipo: 'atacar' }, resiste);
   assert.ok(eventos.some((e) => e.tipo === 'nocaute'));
 });
+
+// --- Golpes especiais --------------------------------------------------------
+
+const { efetividade } = require('./tipos');
+
+const RAZOR_LEAF = {
+  id: 75, nome: 'razor-leaf', tipo: 'grass', classe: 'physical', poder: 55, precisao: 95, pp: 2,
+};
+
+function ladoComGolpes(usuarioId, tipos, golpes, velocidadeBase = 50) {
+  const especie = {
+    id: 1, nome: 'teste', tipos, hp_base: 50, ataque_base: 50, defesa_base: 50, velocidade_base: velocidadeBase,
+  };
+  const time = [1, 2, 3].map((i) => ({
+    especie,
+    golpes,
+    pokemon: {
+      id: usuarioId * 10 + i, mint_numero: i, shiny: false, nivel: 50,
+      iv_hp: 0, iv_ataque: 0, iv_defesa: 0, iv_velocidade: 0, afeto: 0,
+    },
+  }));
+  return montarLado({ id: usuarioId, login: `treinador${usuarioId}` }, time);
+}
+
+test('vantagem de tipo: os dois tipos do alvo se multiplicam', () => {
+  assert.equal(efetividade('grass', ['water', 'ground']), 4);
+  assert.equal(efetividade('fire', ['grass']), 2);
+  assert.equal(efetividade('fire', ['water', 'rock']), 0.25);
+  assert.equal(efetividade('electric', ['ground', 'flying']), 0);
+  assert.equal(efetividade('normal', ['ghost']), 0);
+  assert.equal(efetividade('dragon', ['fairy']), 0);
+  assert.equal(efetividade('fighting', ['normal', 'dark']), 4);
+  assert.equal(efetividade('water', ['normal']), 1);
+  assert.equal(efetividade('stellar', ['normal']), 1);
+});
+
+test('golpe gasta PP, ganha STAB e vantagem de tipo', () => {
+  const estado = criarEstado(ladoComGolpes(1, ['grass'], [RAZOR_LEAF], 90), ladoComGolpes(2, ['water', 'ground'], []));
+  // 0,5: acerta (50 < 95), sem crítico e com a mesma variação nos dois
+  const meio = () => 0.5;
+  const basico = aplicarAcao(estado, 0, { tipo: 'atacar' }, meio).eventos[0];
+  const { estado: novo, eventos } = aplicarAcao(estado, 0, { tipo: 'golpe', indice: 0 }, meio);
+  const dano = eventos[0];
+  assert.equal(dano.tipo, 'dano');
+  assert.equal(dano.golpe, 'razor-leaf');
+  assert.equal(dano.efetividade, 4);
+  // Poder 55 com STAB (1,5x) e 4x contra água/terra bate muito mais forte que o básico (poder 50, sem tipo)
+  assert.ok(dano.dano > basico.dano * 5);
+  assert.equal(novo.lados[0].pokemons[0].golpes[0].pp, 1);
+  assert.equal(estado.lados[0].pokemons[0].golpes[0].pp, 2);
+});
+
+test('golpe pode errar pela precisão e não pode ser usado sem PP', () => {
+  const estado = criarEstado(ladoComGolpes(1, ['grass'], [RAZOR_LEAF], 90), ladoComGolpes(2, ['water'], []));
+  // rng 0,99 * 100 = 99 >= 95 de precisão: errou, mas gastou o PP e passou a vez
+  const errou = aplicarAcao(estado, 0, { tipo: 'golpe', indice: 0 }, () => 0.99);
+  assert.equal(errou.eventos[0].tipo, 'errou');
+  assert.equal(errou.estado.vez, 1);
+  assert.equal(errou.estado.lados[1].pokemons[0].hp, estado.lados[1].pokemons[0].hpMax);
+
+  const semPp = structuredClone(estado);
+  semPp.lados[0].pokemons[0].golpes[0].pp = 0;
+  assert.throws(() => aplicarAcao(semPp, 0, { tipo: 'golpe', indice: 0 }, semSorte), /PP/);
+  assert.throws(() => aplicarAcao(estado, 0, { tipo: 'golpe', indice: 1 }, semSorte), /Golpe inválido/);
+});
+
+test('golpe sem efeito não causa dano', () => {
+  const choque = { ...RAZOR_LEAF, nome: 'thunderbolt', tipo: 'electric', precisao: null };
+  const estado = criarEstado(ladoComGolpes(1, ['electric'], [choque], 90), ladoComGolpes(2, ['ground'], []));
+  const { estado: novo, eventos } = aplicarAcao(estado, 0, { tipo: 'golpe', indice: 0 }, semSorte);
+  assert.equal(eventos[0].dano, 0);
+  assert.equal(eventos[0].efetividade, 0);
+  assert.equal(novo.lados[1].pokemons[0].hp, estado.lados[1].pokemons[0].hpMax);
+});

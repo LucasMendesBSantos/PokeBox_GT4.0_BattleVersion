@@ -1,0 +1,413 @@
+.historia-resumo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 20px;
+  font-weight: 700;
+  color: #555;
+  font-variant-numeric: tabular-nums;
+}
+
+.historia-resumo-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.historia-resumo .historia-pokebola {
+  width: 22px;
+  height: 22px;
+  border-width: 2px;
+}
+
+.historia-resumo .historia-pokebola::after {
+  width: 7px;
+  height: 7px;
+  border-width: 2px;
+}
+
+/* Abas das trilhas */
+.historia-trilhas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.historia-trilha-aba {
+  display: grid;
+  gap: 2px;
+  padding: 8px 14px;
+  font-family: inherit;
+  color: var(--poke-navy);
+  text-align: left;
+  background: #fff;
+  border: 3px solid var(--poke-ink);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.historia-trilha-aba strong {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.historia-trilha-aba span {
+  font-size: 12px;
+  font-weight: 700;
+  color: #555;
+}
+
+.historia-trilha-aba[aria-selected='true'] {
+  background: var(--poke-yellow);
+  box-shadow: 0 3px 0 var(--poke-ink);
+}
+
+.historia-trilha-aba:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.historia-trilha-aba:focus-visible,
+.historia-ponto:focus-visible {
+  outline: 3px solid var(--poke-blue);
+  outline-offset: 2px;
+}
+
+/* Mapa: os pontos formam um "S" em cima de uma estrada tracejada */
+.historia-mapa {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  row-gap: 28px;
+  margin: 0 0 20px;
+  padding: 24px 8px;
+  list-style: none;
+  background:
+    radial-gradient(circle at 15% 80%, rgba(46, 158, 79, 0.25) 0 30px, transparent 31px),
+    radial-gradient(circle at 70% 15%, rgba(46, 158, 79, 0.25) 0 24px, transparent 25px),
+    linear-gradient(#c9ecb0, #a8dc8a);
+  border: 3px solid var(--poke-ink);
+  border-radius: 18px;
+}
+
+/* A estrada liga os centros dos pontos: linha de cima, curva à direita, linha de baixo */
+.historia-mapa::before {
+  content: '';
+  position: absolute;
+  top: calc(24px + 32px);
+  bottom: calc(24px + 32px + 20px);
+  left: 10%;
+  right: 10%;
+  border: 8px dashed rgba(122, 86, 44, 0.55);
+  border-left: 0;
+  border-radius: 0 999px 999px 0;
+}
+
+.historia-mapa li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.historia-ponto {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--poke-navy);
+  background: #fff;
+  border: 3px solid var(--poke-ink);
+  border-radius: 50%;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+
+.historia-ponto img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.historia-ponto[data-situacao='bloqueado'] {
+  color: #888;
+  background: #e4e4e4;
+}
+
+.historia-ponto[data-situacao='inexplorado'] {
+  color: #fff;
+  background: var(--dex-red);
+  animation: historia-pulsar 1.2s ease-in-out infinite alternate;
+}
+
+.historia-ponto[data-situacao='encontrado'] {
+  background: #fff6c8;
+}
+
+.historia-ponto[data-situacao='vencido'] {
+  background: #e3f6e8;
+}
+
+.historia-ponto[data-situacao='capturado'] {
+  background: linear-gradient(to bottom, #ffd7dd 0 50%, #fff 50%);
+}
+
+.historia-ponto[data-situacao='fugiu'],
+.historia-ponto[data-situacao='ignorado'] {
+  background: #e4e4e4;
+}
+
+.historia-ponto[data-situacao='fugiu'] img,
+.historia-ponto[data-situacao='ignorado'] img {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+
+.historia-ponto[aria-pressed='true'] {
+  box-shadow: 0 0 0 4px var(--poke-yellow), 0 4px 0 rgba(0, 0, 0, 0.25);
+}
+
+.historia-ponto-forca {
+  padding: 1px 8px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--poke-navy);
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes historia-pulsar {
+  to { transform: scale(1.08); }
+}
+
+/* Painel do ponto selecionado */
+.historia-painel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+}
+
+.historia-painel-arte {
+  width: min(180px, 40vw);
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.historia-painel[data-situacao='capturado'] .historia-painel-arte,
+.historia-painel[data-situacao='vencido'] .historia-painel-arte {
+  filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.12));
+}
+
+.historia-painel-misterio {
+  display: grid;
+  place-items: center;
+  width: 120px;
+  height: 120px;
+  font-size: 64px;
+  font-weight: 900;
+  color: #fff;
+  background: #2e9e4f;
+  border: 3px solid var(--poke-ink);
+  border-radius: 50%;
+}
+
+.historia-painel[data-situacao='bloqueado'] .historia-painel-misterio {
+  background: #999;
+}
+
+.historia-painel-info {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.historia-painel-info h2,
+.historia-painel-info p {
+  margin: 0;
+}
+
+.historia-painel-info h2 {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--poke-navy);
+}
+
+.historia-painel-ponto {
+  font-size: 12px;
+  font-weight: 800;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.historia-painel-detalhe {
+  font-size: 14px;
+  font-weight: 700;
+  color: #555;
+  font-variant-numeric: tabular-nums;
+}
+
+.historia-painel-capturado {
+  font-weight: 800;
+  color: #1d7a3a;
+}
+
+.historia-link {
+  padding: 0;
+  font: inherit;
+  color: var(--poke-blue);
+  text-decoration: underline;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.historia-refazer {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 2px dashed #ddd;
+}
+
+.historia-refazer p,
+.historia-refazer-dica {
+  font-size: 14px;
+  color: #555;
+}
+
+/* Captura */
+.historia-captura {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  padding: 12px 14px;
+  background: #f6f8fc;
+  border: 2px dashed var(--poke-navy);
+  border-radius: 14px;
+}
+
+.historia-captura-texto {
+  display: grid;
+  gap: 8px;
+  flex: 1 1 220px;
+}
+
+.historia-captura-texto p {
+  margin: 0;
+  font-weight: 700;
+}
+
+.historia-captura-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.historia-ignorar {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  background: #fff6c8;
+  border: 2px solid #c99a00;
+  border-radius: 12px;
+}
+
+.historia-captura-resultado {
+  color: #8a0c20;
+}
+
+.historia-captura-resultado[data-sucesso='true'] {
+  color: #1d7a3a;
+}
+
+/* Pokébola desenhada em CSS; balança enquanto a captura é decidida */
+.historia-pokebola {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  background: linear-gradient(to bottom, var(--dex-red) 0 46%, var(--poke-ink) 46% 54%, #fff 54%);
+  border: 3px solid var(--poke-ink);
+  border-radius: 50%;
+}
+
+.historia-pokebola::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border: 3px solid var(--poke-ink);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.historia-pokebola[data-balancando='true'] {
+  animation: historia-balancar 0.3s ease-in-out infinite alternate;
+}
+
+@keyframes historia-balancar {
+  from { transform: rotate(-20deg); }
+  to { transform: rotate(20deg); }
+}
+
+/* Batalha */
+.historia-batalha-titulo {
+  margin: 6px 0 16px;
+  font-weight: 800;
+  color: #555;
+}
+
+.historia-batalha-fim {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+@media (max-width: 520px) {
+  .historia-mapa {
+    padding: 16px 0;
+  }
+
+  .historia-mapa::before {
+    top: calc(16px + 24px);
+    bottom: calc(16px + 24px + 20px);
+    border-width: 6px;
+  }
+
+  .historia-ponto {
+    width: 48px;
+    height: 48px;
+    font-size: 18px;
+  }
+
+  .historia-ponto img {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .historia-ponto[data-situacao='inexplorado'],
+  .historia-pokebola[data-balancando='true'] {
+    animation: none;
+  }
+}

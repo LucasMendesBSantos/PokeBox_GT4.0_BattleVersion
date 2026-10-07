@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import CartaPokemon from '../components/CartaPokemon';
-import { formatoPokemon } from '../components/formatos';
+import { formatoPokemon, resumoEvolucao } from '../components/formatos';
 import { formatarNome, formatarNumero } from '../components/tipos';
 import { urlArtwork } from '../services/pokeapi';
 import './Time.css';
@@ -80,6 +80,7 @@ function Time({ usuario, onSalvar, onIrParaLoja }) {
       <ol className="time-slots">
         {Array.from({ length: TAMANHO_TIME }, (_, i) => {
           const pokemon = porId.get(selecionados[i]);
+          const evolucao = pokemon && resumoEvolucao(pokemon);
           return (
             <li key={i} className="time-slot" data-vazio={!pokemon}>
               <span className="time-slot-numero">{i + 1}</span>
@@ -88,6 +89,9 @@ function Time({ usuario, onSalvar, onIrParaLoja }) {
                   <img src={urlArtwork(pokemon.especieId, pokemon.shiny)} alt="" />
                   <span className="time-slot-nome">{formatarNome(pokemon.nome)}</span>
                   <span className="time-slot-nivel">{`Nv. ${pokemon.nivel}`}</span>
+                  <span className="time-slot-evolucao" data-pronto={evolucao?.pronto ?? false}>
+                    {evolucao ? evolucao.texto : 'Não evolui mais'}
+                  </span>
                   <span className="time-slot-acoes">
                     <button type="button" aria-label="Mover para a esquerda" disabled={i === 0} onClick={() => mover(i, -1)}>◀</button>
                     <button type="button" aria-label={`Tirar ${formatarNome(pokemon.nome)} do time`} onClick={() => alternar(pokemon.id)}>✕</button>

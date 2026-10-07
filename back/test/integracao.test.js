@@ -356,6 +356,10 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
     assert.equal(evoluiu.dados.shiny, card.shiny);
     assert.deepEqual(evoluiu.dados.ivs, card.ivs);
     assert.equal(evoluiu.dados.nivel, 16);
+    // Pontos extras sorteados: o que esta evolução deu fica no card e entra nos status
+    const { bonusGanho } = evoluiu.dados;
+    assert.ok(Object.values(bonusGanho).every((v) => v >= 0 && v <= 5));
+    assert.deepEqual(evoluiu.dados.bonusEvolucao, bonusGanho);
     assert.ok(evoluiu.dados.status.ataque > card.status.ataque);
     assert.deepEqual(evoluiu.dados.evolucoes.map((e) => [e.especieId, e.nivel]), [[6, 36]]);
 
@@ -460,6 +464,202 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
     assert.equal((await api('GET', '/propostas', ash)).dados.enviadas[0].status, 'recusada');
     assert.equal((await api('DELETE', `/anuncios/${outro.id}`, gary)).status, 204);
     assert.equal((await api('GET', '/anuncios/meus', gary)).dados.length, 0);
+  });
+
+  await s.test('história: pokébolas, explorar, batalhar, capturar e fugir', async () => {
+    const ash = { token: t.ash.token };
+    const inicio = (await api('GET', '/historia', ash)).dados;
+    assert.deepEqual(inicio.proximo, { trilha: 1, ponto: 1, forca: 0.1 });
+    assert.equal(inicio.encontros.length, 0);
+
+    // Pokébolas
+    await pool.query("UPDATE usuarios SET pokecoins = 1000 WHERE lower(login) = 'ash'");
+    assert.equal((await api('POST', '/loja/pokebolas', { ...ash, corpo: { quantidade: 0 } })).status, 400);
+    const compra = await api('POST', '/loja/pokebolas', { ...ash, corpo: { quantidade: 3 } });
+    assert.equal(compra.status, 201, JSON.stringify(compra.dados));
+    assert.deepEqual(compra.dados, { saldo: 970, pokebolas: 3 });
+    assert.equal((await api('GET', '/eu', ash)).dados.usuario.pokebolas, 3);
+
+    // Explorar sorteia o selvagem do ponto 1 e repetir devolve o mesmo
+    const encontro = (await api('POST', '/historia/explorar', ash)).dados;
+    assert.equal(encontro.trilha, 1);
+    assert.equal(encontro.ponto, 1);
+    assert.equal(encontro.forca, 0.1);
+    assert.equal(encontro.nivel, 5);
+    assert.equal(encontro.situacao, 'encontrado');
+    assert.equal((await api('POST', '/historia/explorar', ash)).dados.id, encontro.id);
+    assert.equal((await api('POST', `/historia/encontros/${encontro.id}/capturar`, ash)).status, 400);
+    assert.equal((await api('POST', `/historia/encontros/${encontro.id}/batalha`, { token: t.gary.token })).status, 400);
+
+    // Batalha: o time forte vence o 0,1x atacando
+    await pool.query("UPDATE pokemons SET nivel = 60, xp = 0 WHERE dono_id = (SELECT id FROM usuarios WHERE lower(login) = 'ash')");
+    let resposta = (await api('POST', `/historia/encontros/${encontro.id}/batalha`, ash)).dados;
+    for (let i = 0; i < 100 && !resposta.batalha.fim; i += 1) {
+      const r = await api('POST', `/historia/encontros/${encontro.id}/jogadas`, { ...ash, corpo: { tipo: 'atacar' } });
+      assert.equal(r.status, 200, JSON.stringify(r.dados));
+      resposta = r.dados;
+    }
+    assert.equal(resposta.batalha.fim.vencedor, 0);
+    assert.deepEqual(
+      { pokecoins: resposta.batalha.recompensa.pokecoins, xp: resposta.batalha.recompensa.xp },
+      { pokecoins: 10, xp: 100 },
+    );
+    assert.equal(resposta.encontro.situacao, 'vencido');
+    assert.equal(resposta.encontro.batalha, null);
+    // XP para os 3 do time, mesmo os que não entraram em campo
+    const { rows: xpDoTime } = await pool.query(
+      `SELECT xp FROM pokemons
+        WHERE dono_id = (SELECT id FROM usuarios WHERE lower(login) = 'ash') AND posicao_time IS NOT NULL`,
+    );
+    assert.deepEqual(xpDoTime.map((p) => p.xp), [100, 100, 100]);
+    assert.equal(await saldo(ash.token), 980);
+    assert.equal((await api('POST', `/historia/encontros/${encontro.id}/jogadas`, { ...ash, corpo: { tipo: 'atacar' } })).status, 400);
+    assert.deepEqual((await api('GET', '/historia', ash)).dados.proximo, { trilha: 1, ponto: 2, forca: 0.2 });
+
+    // Refazer só depois de capturar ou de o Pokémon fugir
+    const refazer = (ponto) => api('POST', `/historia/trilhas/1/pontos/${ponto}/refazer`, ash);
+    assert.match((await refazer(1)).dados.erro, /restam 10 tentativas/);
+    assert.equal((await refazer(2)).status, 400);
+
+    // Captura (10% a 50% pela espécie, até 10 tentativas): ou captura, ou ele foge na 10ª
+    const chance = (await api('GET', '/historia', ash)).dados.encontros.find((e) => e.id === encontro.id).chanceCaptura;
+    assert.ok(chance >= 0.1 && chance <= 0.5, `chance ${chance}`);
+    await pool.query("UPDATE usuarios SET pokebolas = 50 WHERE lower(login) = 'ash'");
+    let captura;
+    for (let i = 0; i < 10; i += 1) {
+      captura = (await api('POST', `/historia/encontros/${encontro.id}/capturar`, ash)).dados;
+      if (captura.capturou || captura.fugiu) break;
+    }
+    assert.equal(captura.encontro.tentativasCaptura, 50 - captura.pokebolas);
+    if (captura.capturou) {
+      // O card mantém nível, shiny e IVs do selvagem
+      assert.equal(captura.encontro.situacao, 'capturado');
+      assert.equal(captura.pokemon.especieId, encontro.especieId);
+      assert.equal(captura.pokemon.nivel, encontro.nivel);
+      assert.equal(captura.pokemon.shiny, encontro.shiny);
+      const { rows: [card] } = await pool.query('SELECT origem FROM pokemons WHERE id = $1', [captura.pokemon.id]);
+      assert.equal(card.origem, 'captura');
+    } else {
+      assert.equal(captura.fugiu, true);
+      assert.equal(captura.encontro.situacao, 'fugiu');
+      assert.equal(captura.encontro.tentativasCaptura, 10);
+    }
+    assert.equal((await api('POST', `/historia/encontros/${encontro.id}/capturar`, ash)).status, 400);
+
+    // Fugir na primeira vez: o mesmo Pokémon continua no ponto 2 e não paga nada
+    const segundo = (await api('POST', '/historia/explorar', ash)).dados;
+    assert.equal(segundo.ponto, 2);
+    await api('POST', `/historia/encontros/${segundo.id}/batalha`, ash);
+    const fuga = (await api('POST', `/historia/encontros/${segundo.id}/jogadas`, { ...ash, corpo: { tipo: 'desistir' } })).dados;
+    assert.equal(fuga.batalha.fim.vencedor, 1);
+    assert.equal(fuga.encontro.situacao, 'encontrado');
+    assert.equal(fuga.encontro.batalha, null);
+    assert.equal(await saldo(ash.token), 980);
+    assert.equal((await api('POST', '/historia/explorar', ash)).dados.id, segundo.id);
+
+    // Revanche: novo Pokémon aleatório, custa 25, paga a recompensa de novo e não mexe na trilha
+    await pool.query("UPDATE usuarios SET pokecoins = 20 WHERE lower(login) = 'ash'");
+    const semSaldo = await refazer(1);
+    assert.equal(semSaldo.status, 400);
+    assert.match(semSaldo.dados.erro, /25 Pokécoins/);
+    await pool.query("UPDATE usuarios SET pokecoins = 100 WHERE lower(login) = 'ash'");
+    let revanche = (await refazer(1)).dados;
+    assert.notEqual(revanche.encontro.id, encontro.id);
+    assert.equal(revanche.encontro.revanche, true);
+    assert.equal(revanche.encontro.forca, 0.1);
+    assert.equal(revanche.batalha.estado.revanche, true);
+    assert.equal(await saldo(ash.token), 75);
+    // Pedir de novo devolve a mesma batalha sem cobrar outra vez
+    assert.equal((await refazer(1)).dados.encontro.id, revanche.encontro.id);
+    assert.equal(await saldo(ash.token), 75);
+    const idRevanche = revanche.encontro.id;
+    for (let i = 0; i < 100 && !revanche.batalha.fim; i += 1) {
+      revanche = (await api('POST', `/historia/encontros/${idRevanche}/jogadas`, { ...ash, corpo: { tipo: 'atacar' } })).dados;
+    }
+    assert.equal(revanche.batalha.fim.vencedor, 0);
+    assert.equal(revanche.encontro.situacao, 'vencido');
+    assert.equal(await saldo(ash.token), 85);
+    let historia = (await api('GET', '/historia', ash)).dados;
+    assert.deepEqual(historia.proximo, { trilha: 1, ponto: 2, forca: 0.2 });
+    assert.equal(historia.vencidos, 1);
+    assert.equal(historia.encontros.find((e) => e.ponto === 1).id, idRevanche);
+
+    // Ignorar: não dá mais para capturar e o ponto fica livre para refazer
+    assert.equal((await api('POST', `/historia/encontros/${segundo.id}/ignorar`, ash)).status, 400);
+    const ignorado = await api('POST', `/historia/encontros/${idRevanche}/ignorar`, ash);
+    assert.equal(ignorado.status, 200, JSON.stringify(ignorado.dados));
+    assert.equal(ignorado.dados.situacao, 'ignorado');
+    assert.equal((await api('POST', `/historia/encontros/${idRevanche}/capturar`, ash)).status, 400);
+    assert.equal((await api('POST', `/historia/encontros/${idRevanche}/ignorar`, ash)).status, 400);
+
+    // Na última tentativa sem sucesso ele foge
+    const terceira = (await refazer(1)).dados;
+    for (let i = 0; i < 100 && !terceira.batalha.fim; i += 1) {
+      terceira.batalha = (await api('POST', `/historia/encontros/${terceira.encontro.id}/jogadas`, {
+        ...ash, corpo: { tipo: 'atacar' },
+      })).dados.batalha;
+    }
+    await pool.query('UPDATE historia_encontros SET tentativas_captura = 9 WHERE id = $1', [terceira.encontro.id]);
+    const ultima = (await api('POST', `/historia/encontros/${terceira.encontro.id}/capturar`, ash)).dados;
+    assert.equal(ultima.encontro.situacao, ultima.capturou ? 'capturado' : 'fugiu');
+
+    // Perder uma revanche também faz o Pokémon fugir
+    await pool.query("UPDATE usuarios SET pokecoins = 100 WHERE lower(login) = 'ash'");
+    const outraRevanche = (await refazer(1)).dados;
+    const perdida = (await api('POST', `/historia/encontros/${outraRevanche.encontro.id}/jogadas`, {
+      ...ash, corpo: { tipo: 'desistir' },
+    })).dados;
+    assert.equal(perdida.encontro.situacao, 'fugiu');
+    historia = (await api('GET', '/historia', ash)).dados;
+    assert.equal(historia.vencidos, 1);
+    assert.equal(historia.encontros.find((e) => e.ponto === 1).situacao, 'fugiu');
+  });
+
+  await s.test('golpes especiais: roleta com afeto máximo e uso em batalha', async () => {
+    const ash = { token: t.ash.token };
+    const primeiro = (await api('GET', '/eu', ash)).dados.pokemons.find((p) => p.posicaoTime === 1);
+    const roletar = () => api('POST', `/pokemons/${primeiro.id}/golpes/roletar`, ash);
+
+    // Sem afeto máximo não libera
+    await pool.query('UPDATE pokemons SET afeto = 400, golpes = $2 WHERE id = $1', [primeiro.id, []]);
+    assert.match((await roletar()).dados.erro, /afeto máximo/);
+
+    // Primeira roleta grátis: 2 golpes de dano da lista da espécie (PokeAPI)
+    await pool.query('UPDATE pokemons SET afeto = 500 WHERE id = $1', [primeiro.id]);
+    await pool.query("UPDATE usuarios SET pokecoins = 50 WHERE lower(login) = 'ash'");
+    const roleta = await roletar();
+    assert.equal(roleta.status, 200, JSON.stringify(roleta.dados));
+    assert.equal(roleta.dados.custo, 0);
+    const { golpes } = roleta.dados.pokemon;
+    assert.equal(golpes.length, 2);
+    assert.notEqual(golpes[0].id, golpes[1].id);
+    assert.ok(golpes.every((g) => g.poder > 0 && g.classe !== 'status'));
+    const { rows: [especie] } = await pool.query('SELECT movimentos FROM especies WHERE id = $1', [primeiro.especieId]);
+    assert.ok(golpes.every((g) => especie.movimentos.includes(g.id)));
+    assert.equal(roleta.dados.pokemon.custoRoletaGolpes, 100);
+
+    // As próximas custam 100
+    assert.match((await roletar()).dados.erro, /100 Pokécoins/);
+    await pool.query("UPDATE usuarios SET pokecoins = 500 WHERE lower(login) = 'ash'");
+    const outra = await roletar();
+    assert.equal(outra.dados.custo, 100);
+    assert.equal(await saldo(ash.token), 400);
+
+    // Em batalha (ponto 2 da história, ainda aberto): o golpe gasta PP e aparece no histórico
+    const ponto2 = (await api('POST', '/historia/explorar', ash)).dados;
+    let batalha = (await api('POST', `/historia/encontros/${ponto2.id}/batalha`, ash)).dados.batalha;
+    const emCampo = () => batalha.estado.lados[0].pokemons[batalha.estado.lados[0].ativo];
+    assert.equal(emCampo().pokemonId, primeiro.id);
+    const ppAntes = emCampo().golpes[0].pp;
+    assert.equal((await api('POST', `/historia/encontros/${ponto2.id}/jogadas`, {
+      ...ash, corpo: { tipo: 'golpe', indice: 5 },
+    })).status, 400);
+    const usou = await api('POST', `/historia/encontros/${ponto2.id}/jogadas`, { ...ash, corpo: { tipo: 'golpe', indice: 0 } });
+    assert.equal(usou.status, 200, JSON.stringify(usou.dados));
+    batalha = usou.dados.batalha;
+    const eventoDoGolpe = batalha.log.at(batalha.fim ? -1 : -2).eventos[0];
+    assert.ok(eventoDoGolpe.tipo === 'errou' || eventoDoGolpe.golpe === outra.dados.pokemon.golpes[0].nome);
+    if (!batalha.fim) assert.equal(emCampo().golpes[0].pp, ppAntes - 1);
   });
 
   await s.test('sair e redefinir senha derrubam a sessão', async () => {

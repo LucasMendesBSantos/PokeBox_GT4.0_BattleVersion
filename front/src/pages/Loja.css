@@ -10,6 +10,27 @@
   flex-basis: 100%;
 }
 
+.loja-pokebolas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-bottom: 20px;
+}
+
+.loja-pokebolas-info {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 260px;
+}
+
+.loja-pokebolas-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
 .loja-geracoes {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));

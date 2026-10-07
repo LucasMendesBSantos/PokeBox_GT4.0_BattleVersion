@@ -3,6 +3,8 @@ const assert = require('node:assert/strict');
 const config = require('./config');
 const {
   sortearAtributos, calcularStatus, aplicarXp, evolucoesDisponiveis, coracoes, aplicarCuidado, descreverAfeto, bemEstarAtual,
+  forcaDoPonto, proximoPonto, nivelSelvagem, statusSelvagem, xpDaHistoria, sortearBonusEvolucao,
+  chanceDeCaptura,
 } = require('./regras');
 const { mapearCadeia } = require('./especies');
 
@@ -133,4 +135,63 @@ test('mapearCadeia soma 20 níveis quando a evolução é por pedra/amizade', ()
   const mapa = mapearCadeia(cadeia, 1, new Map());
   assert.equal(mapa.get('pichu')[0].nivel, 21);
   assert.equal(mapa.get('pikachu')[0].nivel, 41);
+});
+
+test('força da história: 0,1x a 1,0x na trilha 1, 1,1x a 2,0x na trilha 2, até 5,0x', () => {
+  assert.equal(forcaDoPonto(1, 1), 0.1);
+  assert.equal(forcaDoPonto(1, 3), 0.3);
+  assert.equal(forcaDoPonto(1, 10), 1);
+  assert.equal(forcaDoPonto(2, 1), 1.1);
+  assert.equal(forcaDoPonto(2, 10), 2);
+  assert.equal(forcaDoPonto(5, 10), 5);
+});
+
+test('proximoPonto anda pela trilha e termina depois do 50º ponto', () => {
+  assert.deepEqual(proximoPonto(0), { trilha: 1, ponto: 1 });
+  assert.deepEqual(proximoPonto(9), { trilha: 1, ponto: 10 });
+  assert.deepEqual(proximoPonto(10), { trilha: 2, ponto: 1 });
+  assert.deepEqual(proximoPonto(49), { trilha: 5, ponto: 10 });
+  assert.equal(proximoPonto(50), null);
+});
+
+test('Pokémon selvagem: status da força normal vezes a força, nível acompanhando', () => {
+  const ivs = { iv_hp: 31, iv_ataque: 31, iv_defesa: 31, iv_velocidade: 31 };
+  // Pikachu nível 50 com IVs perfeitos: 110 / 75 / 60 / 110
+  assert.deepEqual(statusSelvagem(PIKACHU, ivs, 1), { hp: 110, ataque: 75, defesa: 60, velocidade: 110 });
+  assert.deepEqual(statusSelvagem(PIKACHU, ivs, 0.1), { hp: 11, ataque: 7, defesa: 6, velocidade: 11 });
+  assert.deepEqual(statusSelvagem(PIKACHU, ivs, 2), { hp: 220, ataque: 150, defesa: 120, velocidade: 220 });
+  assert.equal(nivelSelvagem(0.1), 5);
+  assert.equal(nivelSelvagem(1), 50);
+  assert.equal(nivelSelvagem(3.5), config.NIVEL_MAXIMO);
+  assert.equal(xpDaHistoria(0.1), 100);
+});
+
+test('bônus da evolução: cada status sorteia a própria chance de ganhar de 1 a 5 pontos', () => {
+  // PS: 0,1 < 30% e ganha 1 + floor(0 * 5) = 1; Ataque: 0,9 não ganha; Defesa: 0,2 < 30% e ganha 1 + floor(0,99 * 5) = 5; Velocidade não
+  assert.deepEqual(
+    sortearBonusEvolucao(sequencia(0.1, 0, 0.9, 0.2, 0.99, 0.7)),
+    { hp: 1, ataque: 0, defesa: 5, velocidade: 0 },
+  );
+  for (let i = 0; i < 2000; i += 1) {
+    for (const valor of Object.values(sortearBonusEvolucao())) assert.ok(Number.isInteger(valor) && valor >= 0 && valor <= 5);
+  }
+});
+
+test('os pontos extras da evolução somam nos status', () => {
+  const pokemon = { nivel: 50, iv_hp: 31, iv_ataque: 31, iv_defesa: 31, iv_velocidade: 31 };
+  assert.deepEqual(
+    calcularStatus(PIKACHU, { ...pokemon, bonus_hp: 3, bonus_velocidade: 5 }),
+    { hp: 113, ataque: 75, defesa: 60, velocidade: 115 },
+  );
+});
+
+test('chance de captura: 10% nos lendários, 20% nos iniciais, 50% nos mais fáceis', () => {
+  assert.equal(chanceDeCaptura(3), 0.1);
+  assert.equal(chanceDeCaptura(45), 0.2); // iniciais
+  assert.equal(chanceDeCaptura(255), 0.5);
+  assert.equal(chanceDeCaptura(24), 0.15); // meio entre lendários e iniciais
+  assert.equal(chanceDeCaptura(150), 0.35); // meio entre iniciais e os mais fáceis
+  // Fora da faixa da PokeAPI fica nos limites
+  assert.equal(chanceDeCaptura(0), 0.1);
+  assert.equal(chanceDeCaptura(300), 0.5);
 });

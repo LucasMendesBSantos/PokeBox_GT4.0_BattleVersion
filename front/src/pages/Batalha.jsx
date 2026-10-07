@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { formatarNome, formatarNumero } from '../components/tipos';
 import { tempoRestante } from '../components/tempo';
+import { LadoCampo } from '../components/CampoBatalha';
+import { BotoesGolpes } from '../components/Golpes';
+import { descreverEventos } from '../components/eventosBatalha';
 import { urlArtwork } from '../services/pokeapi';
 import * as api from '../services/api';
 import './Batalha.css';
@@ -10,104 +13,6 @@ import './Batalha.css';
 const ATUALIZAR_MS = 15 * 1000;
 
 const MOTIVOS = { nocaute: 'por nocaute', wo: 'por W.O.', desistencia: 'por desistência' };
-
-// Transforma os eventos de uma ação em frases para o histórico
-function descreverEventos(acao, estado) {
-  const nomePokemon = (id) => {
-    const pokemon = estado.lados.flatMap((l) => l.pokemons).find((p) => p.pokemonId === id);
-    return pokemon ? formatarNome(pokemon.nome) : 'Pokémon';
-  };
-  const login = (lado) => estado.lados[lado].login;
-
-  return acao.eventos.map((evento) => {
-    switch (evento.tipo) {
-      case 'dano':
-        return `${nomePokemon(evento.atacante)} causou ${evento.dano} de dano em ${nomePokemon(evento.alvo)}${evento.critico ? ' (crítico!)' : ''}.`;
-      case 'resistiu':
-        return `${nomePokemon(evento.pokemonId)} de ${login(evento.lado)} aguentou firme com 1 PS pelo afeto ao treinador!`;
-      case 'nocaute':
-        return `${nomePokemon(evento.pokemonId)} de ${login(evento.lado)} foi nocauteado!`;
-      case 'entrou':
-        return `${login(evento.lado)} colocou ${formatarNome(estado.lados[evento.lado].pokemons[evento.indice].nome)} em campo.`;
-      case 'timeout':
-        return `${login(evento.lado)} perdeu o prazo de 4h (${evento.timeoutsSeguidos}/2) e a vez passou.`;
-      case 'desistiu':
-        return `${login(evento.lado)} desistiu.`;
-      default:
-        return '';
-    }
-  });
-}
-
-function BarraHp({ pokemon }) {
-  const porcentagem = (pokemon.hp / pokemon.hpMax) * 100;
-  let nivel = 'alto';
-  if (porcentagem <= 20) nivel = 'baixo';
-  else if (porcentagem <= 50) nivel = 'medio';
-  return (
-    <div className="batalha-hp">
-      <span className="batalha-hp-barra" data-nivel={nivel}>
-        <span style={{ width: `${porcentagem}%` }} />
-      </span>
-      <span className="batalha-hp-texto">{`${pokemon.hp} / ${pokemon.hpMax} PS`}</span>
-    </div>
-  );
-}
-
-const formatoPokemonBatalha = PropTypes.shape({
-  pokemonId: PropTypes.number.isRequired,
-  mintNumero: PropTypes.number.isRequired,
-  especieId: PropTypes.number.isRequired,
-  nome: PropTypes.string.isRequired,
-  shiny: PropTypes.bool.isRequired,
-  nivel: PropTypes.number.isRequired,
-  hp: PropTypes.number.isRequired,
-  hpMax: PropTypes.number.isRequired,
-});
-
-BarraHp.propTypes = { pokemon: formatoPokemonBatalha.isRequired };
-
-// Um lado do campo: o Pokémon ativo grande e o banco de reserva
-function LadoCampo({ lado, meu }) {
-  const ativo = lado.pokemons[lado.ativo];
-  return (
-    <section className={`batalha-lado${meu ? ' batalha-lado--meu' : ''}`} aria-label={`Time de ${lado.login}`}>
-      <div className="batalha-ativo">
-        <img src={urlArtwork(ativo.especieId, ativo.shiny)} alt={formatarNome(ativo.nome)} />
-        <div className="batalha-ativo-info">
-          <span className="batalha-treinador">{meu ? 'Você' : lado.login}</span>
-          <strong>
-            {formatarNome(ativo.nome)}
-            {ativo.shiny && ' ★'}
-          </strong>
-          <span className="batalha-detalhe">{`${formatarNumero(ativo.mintNumero)} · Nv. ${ativo.nivel}`}</span>
-          <BarraHp pokemon={ativo} />
-        </div>
-      </div>
-      <ul className="batalha-banco">
-        {lado.pokemons.map((pokemon, i) => (
-          <li
-            key={pokemon.pokemonId}
-            data-ativo={i === lado.ativo}
-            data-nocauteado={pokemon.hp === 0}
-            title={`${formatarNome(pokemon.nome)}: ${pokemon.hp}/${pokemon.hpMax} PS`}
-          >
-            <img src={urlArtwork(pokemon.especieId, pokemon.shiny)} alt={formatarNome(pokemon.nome)} />
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-LadoCampo.propTypes = {
-  lado: PropTypes.shape({
-    login: PropTypes.string.isRequired,
-    ativo: PropTypes.number.isRequired,
-    pokemons: PropTypes.arrayOf(formatoPokemonBatalha).isRequired,
-  }).isRequired,
-  meu: PropTypes.bool.isRequired,
-};
 
 function Batalha({ batalhaId, onVoltar, onAtualizarUsuario }) {
   const [dados, setDados] = useState(null);
@@ -238,6 +143,11 @@ function Batalha({ batalhaId, onVoltar, onAtualizarUsuario }) {
 
       {batalha.minhaVez && (
         <div className="batalha-acoes jogo-painel">
+          <BotoesGolpes
+            pokemon={eu.pokemons[eu.ativo]}
+            desabilitado={enviando}
+            onUsar={(indice) => enviarJogada({ tipo: 'golpe', indice })}
+          />
           <button type="button" className="jogo-botao" disabled={enviando} onClick={() => enviarJogada({ tipo: 'atacar' })}>
             Atacar
           </button>
@@ -295,7 +205,7 @@ function Batalha({ batalhaId, onVoltar, onAtualizarUsuario }) {
             {[...dados.acoes].reverse().map((acao) => (
               <li key={`${acao.turno}-${acao.criadaEm}`} data-automatica={acao.automatica}>
                 <span className="batalha-historico-turno">{`Turno ${acao.turno}`}</span>
-                {descreverEventos(acao, estado).map((frase) => <span key={frase}>{frase}</span>)}
+                {descreverEventos(acao.eventos, estado).map((frase) => <span key={frase}>{frase}</span>)}
               </li>
             ))}
           </ol>

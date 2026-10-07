@@ -9,15 +9,15 @@
 const { pool, transacao } = require('../db');
 const config = require('./config');
 const motor = require('./motor');
-const { darXp } = require('./pokemons');
+const { darXp, SELECT_GOLPES } = require('./pokemons');
 const { ErroJogo } = require('./erros');
 
 const depoisDe = (agora, ms) => new Date(agora.getTime() + ms);
 
-/** Time de batalha do usuário, na ordem das posições, com os dados da espécie */
+/** Time de batalha do usuário, na ordem das posições, com os dados da espécie e os golpes especiais */
 async function carregarTime(client, usuarioId) {
   const { rows } = await client.query(
-    `SELECT to_jsonb(p) AS pokemon, to_jsonb(e) AS especie
+    `SELECT to_jsonb(p) AS pokemon, to_jsonb(e) AS especie, ${SELECT_GOLPES} AS golpes
        FROM pokemons p JOIN especies e ON e.id = p.especie_id
       WHERE p.dono_id = $1 AND p.posicao_time IS NOT NULL
       ORDER BY p.posicao_time`,
@@ -207,7 +207,7 @@ async function calcularPremio(client, { usuarioId, oponenteId, base, jogadasManu
 async function distribuirRecompensas(client, batalhaId, estado, fim) {
   const { rows: [{ total: jogadasManuais }] } = await client.query(
     `SELECT count(*) AS total FROM batalha_acoes
-      WHERE batalha_id = $1 AND NOT automatica AND tipo IN ('atacar', 'trocar')`,
+      WHERE batalha_id = $1 AND NOT automatica AND tipo IN ('atacar', 'golpe', 'trocar')`,
     [batalhaId],
   );
 
@@ -409,6 +409,7 @@ async function expirarDesafios() {
 }
 
 module.exports = {
+  carregarTime,
   desafiar,
   responderDesafio,
   jogar,

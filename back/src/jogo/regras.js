@@ -31,7 +31,14 @@ const { ErroJogo } = require('./erros');
  * @property {number} mult_altura
  * @property {number} mult_peso
  *
- * @typedef {AtributosSorteados & { especie_id: number, nivel: number, xp: number }} Pokemon
+ * @typedef {object} BonusStatus  pontos extras ganhos ao evoluir
+ * @property {number} hp
+ * @property {number} ataque
+ * @property {number} defesa
+ * @property {number} velocidade
+ *
+ * @typedef {AtributosSorteados & { especie_id: number, nivel: number, xp: number,
+ *   bonus_hp?: number, bonus_ataque?: number, bonus_defesa?: number, bonus_velocidade?: number }} Pokemon
  *
  * @typedef {object} Status
  * @property {number} hp
@@ -82,7 +89,7 @@ function medidas(especie, pokemon) {
  * Fórmula dos jogos principais (sem EVs e natureza):
  *   HP     = (2 * base + IV) * nível / 100 + nível + 10
  *   outros = (2 * base + IV) * nível / 100 + 5
- * Depois soma o bônus do afeto (+2% por coração).
+ * Depois soma o bônus do afeto (+2% por coração) e os pontos extras ganhos nas evoluções.
  * @param {Especie} especie
  * @param {Pokemon & { afeto?: number }} pokemon
  * @returns {Status}
@@ -92,10 +99,10 @@ function calcularStatus(especie, pokemon) {
   const bonus = 1 + bonusAfeto(pokemon.afeto);
   const comBonus = (valor) => Math.floor(valor * bonus);
   return {
-    hp: comBonus(escala(especie.hp_base, pokemon.iv_hp) + pokemon.nivel + 10),
-    ataque: comBonus(escala(especie.ataque_base, pokemon.iv_ataque) + 5),
-    defesa: comBonus(escala(especie.defesa_base, pokemon.iv_defesa) + 5),
-    velocidade: comBonus(escala(especie.velocidade_base, pokemon.iv_velocidade) + 5),
+    hp: comBonus(escala(especie.hp_base, pokemon.iv_hp) + pokemon.nivel + 10) + (pokemon.bonus_hp ?? 0),
+    ataque: comBonus(escala(especie.ataque_base, pokemon.iv_ataque) + 5) + (pokemon.bonus_ataque ?? 0),
+    defesa: comBonus(escala(especie.defesa_base, pokemon.iv_defesa) + 5) + (pokemon.bonus_defesa ?? 0),
+    velocidade: comBonus(escala(especie.velocidade_base, pokemon.iv_velocidade) + 5) + (pokemon.bonus_velocidade ?? 0),
   };
 }
 
@@ -209,12 +216,99 @@ function aplicarXp({ nivel, xp }, xpGanho) {
 }
 
 /**
+ * Sorteia os pontos extras de uma evolução: cada status tem a própria chance (BONUS_EVOLUCAO.chance)
+ * de ganhar de BONUS_EVOLUCAO.minimo a maximo pontos; os outros ficam com 0.
+ * @param {import('./aleatorio').Rng} [rng]
+ * @returns {BonusStatus}
+ */
+function sortearBonusEvolucao(rng = rngSeguro) {
+  const { chance, minimo, maximo } = config.BONUS_EVOLUCAO;
+  const sortear = () => (rng() < chance ? inteiroEntre(rng, minimo, maximo) : 0);
+  return {
+    hp: sortear(), ataque: sortear(), defesa: sortear(), velocidade: sortear(),
+  };
+}
+
+/**
  * Evoluções liberadas no nível atual (vazio = botão "Evoluir" escondido)
  * @returns {Evolucao[]}
  */
 function evolucoesDisponiveis(especie, pokemon) {
   return especie.evolucoes.filter((evolucao) => pokemon.nivel >= evolucao.nivel);
 }
+
+// ---------------------------------------------------------------------------
+// História
+// ---------------------------------------------------------------------------
+
+/**
+ * Multiplicador de força de um ponto da história, com uma casa decimal.
+ * Trilha 1: 0,1x no ponto 1 até 1,0x no ponto 10; trilha 2: 1,1x até 2,0x; e assim por diante.
+ */
+function forcaDoPonto(trilha, ponto) {
+  const forca = (trilha - 1) * config.HISTORIA_PONTOS_POR_TRILHA * config.HISTORIA_FORCA_POR_PONTO
+    + ponto * config.HISTORIA_FORCA_POR_PONTO;
+  return Math.round(forca * 10) / 10;
+}
+
+/**
+ * Próximo ponto a explorar, a partir de quantos pontos o treinador já venceu (a trilha é linear).
+ * @returns {{ trilha: number, ponto: number } | null}  null = história concluída
+ */
+function proximoPonto(vencidos) {
+  const total = config.HISTORIA_TRILHAS * config.HISTORIA_PONTOS_POR_TRILHA;
+  if (vencidos >= total) return null;
+  return {
+    trilha: Math.floor(vencidos / config.HISTORIA_PONTOS_POR_TRILHA) + 1,
+    ponto: (vencidos % config.HISTORIA_PONTOS_POR_TRILHA) + 1,
+  };
+}
+
+/** Nível mostrado (e usado no dano) do Pokémon selvagem: acompanha a força, de 1 a NIVEL_MAXIMO */
+function nivelSelvagem(forca) {
+  return Math.min(config.NIVEL_MAXIMO, Math.max(1, Math.round(config.HISTORIA_NIVEL_FORCA_NORMAL * forca)));
+}
+
+/**
+ * Status do Pokémon selvagem: os status da espécie no nível da força normal, vezes a força.
+ * @param {Especie} especie
+ * @param {AtributosSorteados} atributos
+ * @param {number} forca
+ * @returns {Status}
+ */
+function statusSelvagem(especie, atributos, forca) {
+  const normal = calcularStatus(especie, { ...atributos, nivel: config.HISTORIA_NIVEL_FORCA_NORMAL });
+  const vezes = (valor) => Math.max(1, Math.floor(valor * forca));
+  return {
+    hp: vezes(normal.hp),
+    ataque: vezes(normal.ataque),
+    defesa: vezes(normal.defesa),
+    velocidade: vezes(normal.velocidade),
+  };
+}
+
+/**
+ * Chance de capturar a espécie, a partir do capture_rate da PokeAPI, seguindo os pontos de
+ * CHANCE_CAPTURA (10% nos lendários, 20% nos iniciais, 50% nos mais fáceis).
+ * @param {number} taxaCaptura capture_rate da espécie
+ */
+function chanceDeCaptura(taxaCaptura) {
+  const pontos = config.CHANCE_CAPTURA;
+  const arredondar = (chance) => Math.round(chance * 1000) / 1000;
+  if (taxaCaptura <= pontos[0][0]) return pontos[0][1];
+  for (let i = 1; i < pontos.length; i += 1) {
+    const [taxaAntes, chanceAntes] = pontos[i - 1];
+    const [taxaDepois, chanceDepois] = pontos[i];
+    if (taxaCaptura <= taxaDepois) {
+      const proporcao = (taxaCaptura - taxaAntes) / (taxaDepois - taxaAntes);
+      return arredondar(chanceAntes + proporcao * (chanceDepois - chanceAntes));
+    }
+  }
+  return pontos.at(-1)[1];
+}
+
+/** XP que cada Pokémon do time ganha ao vencer um ponto da história */
+const xpDaHistoria = (forca) => Math.round(config.HISTORIA_RECOMPENSA.xpPorForca * forca);
 
 /**
  * Card pronto para o front, a partir de uma linha de pokemons + especies (SELECT p.*, e.*)
@@ -238,11 +332,23 @@ function descreverPokemon(linha) {
       hp: linha.iv_hp, ataque: linha.iv_ataque, defesa: linha.iv_defesa, velocidade: linha.iv_velocidade,
     },
     status: calcularStatus(especie, linha),
+    // Pontos extras somados nas evoluções (já incluídos em status)
+    bonusEvolucao: {
+      hp: linha.bonus_hp ?? 0,
+      ataque: linha.bonus_ataque ?? 0,
+      defesa: linha.bonus_defesa ?? 0,
+      velocidade: linha.bonus_velocidade ?? 0,
+    },
     ...medidas(especie, linha),
     posicaoTime: linha.posicao_time,
     posicaoVitrine: linha.posicao_vitrine,
     anunciado: Boolean(linha.anunciado),
     afeto: descreverAfeto(linha.afeto),
+    // Golpes especiais (liberados com o afeto máximo) e quanto custa sortear de novo
+    golpes: (linha.golpes_detalhe ?? []).map((g) => ({
+      id: g.id, nome: g.nome, tipo: g.tipo, classe: g.classe, poder: g.poder, precisao: g.precisao, pp: g.pp,
+    })),
+    custoRoletaGolpes: linha.golpes?.length > 0 ? config.CUSTO_ROLETA_GOLPES : 0,
     ...bemEstarAtual(linha),
     cuidadosDisponiveisEm: disponibilidadeCuidados(linha.ultimos_cuidados),
     evolucoes: especie.evolucoes.map((evolucao) => ({
@@ -262,6 +368,13 @@ module.exports = {
   bemEstarAtual,
   descreverAfeto,
   aplicarXp,
+  sortearBonusEvolucao,
   evolucoesDisponiveis,
+  forcaDoPonto,
+  proximoPonto,
+  nivelSelvagem,
+  statusSelvagem,
+  chanceDeCaptura,
+  xpDaHistoria,
   descreverPokemon,
 };

@@ -93,10 +93,12 @@ export const redefinirSenha = (dados) => chamar('POST', '/auth/redefinir-senha',
 export const buscarEu = () => chamar('GET', '/eu');
 export const escolherInicial = (especieId) => chamar('POST', '/eu/inicial', { especieId });
 export const comprarPokemon = (geracao) => chamar('POST', '/loja/comprar', { geracao });
+export const comprarPokebolas = (quantidade) => chamar('POST', '/loja/pokebolas', { quantidade });
 export const salvarTime = (pokemonIds) => chamar('PUT', '/time', { pokemonIds });
 export const evoluir = (pokemonId, especieId) => chamar('POST', `/pokemons/${pokemonId}/evoluir`, { especieId });
 export const cuidar = (pokemonId, tipo) => chamar('POST', `/pokemons/${pokemonId}/cuidar`, { tipo });
 export const listarCuidados = (pokemonId) => chamar('GET', `/pokemons/${pokemonId}/cuidados`);
+export const roletarGolpes = (pokemonId) => chamar('POST', `/pokemons/${pokemonId}/golpes/roletar`);
 export const buscarTreinadores = (busca) => chamar('GET', `/treinadores?busca=${encodeURIComponent(busca)}`);
 export const listarTreinadoresAtivos = () => chamar('GET', '/treinadores/ativos');
 
@@ -106,6 +108,15 @@ export const desafiar = (oponente) => chamar('POST', '/batalhas', { oponente });
 export const buscarBatalha = (id) => chamar('GET', `/batalhas/${id}`);
 export const responderDesafio = (id, aceitar) => chamar('POST', `/batalhas/${id}/responder`, { aceitar });
 export const jogar = (id, jogada) => chamar('POST', `/batalhas/${id}/jogadas`, jogada);
+
+// História
+export const buscarHistoria = () => chamar('GET', '/historia');
+export const explorarHistoria = () => chamar('POST', '/historia/explorar');
+export const batalharNaHistoria = (encontroId) => chamar('POST', `/historia/encontros/${encontroId}/batalha`);
+export const refazerPonto = (trilha, ponto) => chamar('POST', `/historia/trilhas/${trilha}/pontos/${ponto}/refazer`);
+export const jogarNaHistoria = (encontroId, jogada) => chamar('POST', `/historia/encontros/${encontroId}/jogadas`, jogada);
+export const capturar = (encontroId) => chamar('POST', `/historia/encontros/${encontroId}/capturar`);
+export const ignorarPokemon = (encontroId) => chamar('POST', `/historia/encontros/${encontroId}/ignorar`);
 
 // Vitrine
 export const listarVitrines = (busca = '') => chamar('GET', `/vitrines?busca=${encodeURIComponent(busca)}`);

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import Coracoes from './Coracoes';
+import { ListaGolpes } from './Golpes';
 import { formatoPokemon } from './formatos';
 import { dadosTipo, formatarNome, formatarNumero } from './tipos';
 import { tempoDesde, tempoRestante } from './tempo';
@@ -64,7 +65,78 @@ BarraBemEstar.propTypes = { nome: PropTypes.string.isRequired, valor: PropTypes.
 // Atualiza os contadores de espera dos botões
 const RELOGIO_MS = 30 * 1000;
 
-function CantinhoCuidado({ pokemon, onCuidar, onVoltar }) {
+// Golpes especiais: liberados com o afeto máximo, sorteados entre os que a espécie aprende
+function CartaoGolpes({ pokemon, nome, onRoletar }) {
+  const [girando, setGirando] = useState(false);
+  const [confirmar, setConfirmar] = useState(false);
+  const [mensagem, setMensagem] = useState(null);
+  const [erro, setErro] = useState(null);
+  const { golpes, custoRoletaGolpes: custo } = pokemon;
+
+  const handleRoletar = async () => {
+    setGirando(true);
+    setErro(null);
+    setMensagem(null);
+    setConfirmar(false);
+    try {
+      const { pokemon: atualizado } = await onRoletar(pokemon.id);
+      const nomes = atualizado.golpes.map((g) => formatarNome(g.nome)).join(' e ');
+      setMensagem(`${nome} aprendeu ${nomes}!`);
+    } catch (e) {
+      setErro(e.message);
+    } finally {
+      setGirando(false);
+    }
+  };
+
+  return (
+    <section className="cantinho-cartao">
+      <h3>Golpes especiais</h3>
+      {!pokemon.afeto.maximo ? (
+        <p className="cantinho-dica">
+          {`Com o afeto máximo (5 ♥), ${nome} poderá girar a roleta e aprender 2 golpes entre os que a espécie dele aprende.`}
+        </p>
+      ) : (
+        <>
+          {golpes.length > 0 ? (
+            <ListaGolpes golpes={golpes} />
+          ) : (
+            <p className="cantinho-dica">{`${nome} confia totalmente em você! Gire a roleta para ele aprender 2 golpes.`}</p>
+          )}
+          {mensagem && <p className="cantinho-dica" role="status"><strong>{mensagem}</strong></p>}
+          {erro && <p className="jogo-erro" role="alert">{erro}</p>}
+          {confirmar ? (
+            <div className="cantinho-confirmar">
+              <span>{`Os golpes atuais serão trocados por 2 novos sorteados. Custa ${custo} Pokécoins.`}</span>
+              <button type="button" className="jogo-botao" disabled={girando} onClick={handleRoletar}>Confirmar</button>
+              <button type="button" className="jogo-botao jogo-botao--claro" onClick={() => setConfirmar(false)}>Cancelar</button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="jogo-botao jogo-botao--azul"
+              disabled={girando}
+              onClick={() => (custo > 0 ? setConfirmar(true) : handleRoletar())}
+            >
+              {girando && 'Girando a roleta...'}
+              {!girando && (custo > 0 ? `Roletar de novo · ${custo} Pokécoins` : 'Girar a roleta (grátis)')}
+            </button>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+CartaoGolpes.propTypes = {
+  pokemon: formatoPokemon.isRequired,
+  nome: PropTypes.string.isRequired,
+  onRoletar: PropTypes.func.isRequired,
+};
+
+function CantinhoCuidado({
+  pokemon, onCuidar, onRoletarGolpes, onVoltar,
+}) {
   const nome = formatarNome(pokemon.nome);
   const [historico, setHistorico] = useState([]);
   const [reacao, setReacao] = useState(null);
@@ -98,7 +170,7 @@ function CantinhoCuidado({ pokemon, onCuidar, onVoltar }) {
       let texto = ganho > 0 ? REACOES[tipo](nome) : `${nome} já te adora o máximo possível!`;
       if (atualizado.afeto.coracoes > coracoesAntes) {
         texto += atualizado.afeto.maximo
-          ? ` Afeto máximo! Agora ${nome} pode aguentar firme um golpe letal nas batalhas.`
+          ? ` Afeto máximo! Agora ${nome} pode aguentar firme um golpe letal nas batalhas e aprender golpes especiais.`
           : ' Vocês ganharam um novo coração!';
       }
       setReacao(texto);
@@ -205,6 +277,8 @@ function CantinhoCuidado({ pokemon, onCuidar, onVoltar }) {
             </dl>
           </section>
 
+          <CartaoGolpes pokemon={pokemon} nome={nome} onRoletar={onRoletarGolpes} />
+
           <section className="cantinho-cartao">
             <h3>Últimos cuidados</h3>
             {historico.length === 0 ? (
@@ -227,7 +301,8 @@ function CantinhoCuidado({ pokemon, onCuidar, onVoltar }) {
               Cada coração dá <strong>+2% em todos os status</strong>. Com os 5 corações,
               {` ${nome} `}
               tem <strong>30% de chance de aguentar com 1 PS</strong> um golpe que o nocautearia
-              (uma vez por batalha). O afeto continua depois de evoluir.
+              (uma vez por batalha) e pode aprender <strong>2 golpes especiais</strong> na roleta.
+              O afeto continua depois de evoluir.
               Humor e energia caem devagar com o tempo: brincar cansa, então alimente para recuperar a energia.
             </p>
           </section>
@@ -240,6 +315,7 @@ function CantinhoCuidado({ pokemon, onCuidar, onVoltar }) {
 CantinhoCuidado.propTypes = {
   pokemon: formatoPokemon.isRequired,
   onCuidar: PropTypes.func.isRequired,
+  onRoletarGolpes: PropTypes.func.isRequired,
   onVoltar: PropTypes.func.isRequired,
 };
 

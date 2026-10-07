@@ -5,6 +5,8 @@ const pokemons = require('./jogo/pokemons');
 const batalhas = require('./jogo/batalhas');
 const vitrines = require('./jogo/vitrines');
 const trocas = require('./jogo/trocas');
+const historia = require('./jogo/historia');
+const golpes = require('./jogo/golpes');
 const config = require('./jogo/config');
 const { ErroJogo } = require('./jogo/erros');
 
@@ -136,6 +138,10 @@ router.post('/loja/comprar', autenticar, async (req, res) => {
   res.status(201).json(await usuarios.comprarPokemonAleatorio(req.usuario.id, inteiro(req.body.geracao, 'Geração')));
 });
 
+router.post('/loja/pokebolas', autenticar, async (req, res) => {
+  res.status(201).json(await usuarios.comprarPokebolas(req.usuario.id, inteiro(req.body.quantidade, 'Quantidade')));
+});
+
 router.put('/time', autenticar, async (req, res) => {
   if (!Array.isArray(req.body.pokemonIds)) throw new ErroJogo('Envie a lista pokemonIds.');
   await usuarios.definirTime(req.usuario.id, req.body.pokemonIds.map((id) => inteiro(id, 'Pokémon')));
@@ -154,6 +160,10 @@ router.post('/pokemons/:id/cuidar', autenticar, async (req, res) => {
   const { tipo } = req.body;
   if (!Object.hasOwn(config.CUIDADOS, tipo)) throw new ErroJogo('Cuidado inválido.');
   res.json(await pokemons.cuidar(req.usuario.id, inteiro(req.params.id, 'Pokémon'), tipo));
+});
+
+router.post('/pokemons/:id/golpes/roletar', autenticar, async (req, res) => {
+  res.json(await golpes.roletarGolpes(req.usuario.id, inteiro(req.params.id, 'Pokémon')));
 });
 
 router.get('/pokemons/:id/cuidados', autenticar, async (req, res) => {
@@ -265,6 +275,49 @@ router.get('/treinadores/ativos', autenticar, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// História
+// ---------------------------------------------------------------------------
+
+/** Jogada de batalha vinda do corpo da requisição (mesmo formato nas batalhas e na história) */
+function acaoDe(corpo) {
+  const { tipo } = corpo;
+  if (tipo === 'atacar' || tipo === 'desistir') return { tipo };
+  if (tipo === 'trocar' || tipo === 'golpe') return { tipo, indice: Number(corpo.indice) };
+  throw new ErroJogo('Jogada inválida.');
+}
+
+router.get('/historia', autenticar, async (req, res) => {
+  res.json(await historia.obterHistoria(req.usuario.id));
+});
+
+router.post('/historia/explorar', autenticar, async (req, res) => {
+  res.json(await historia.explorar(req.usuario.id));
+});
+
+router.post('/historia/encontros/:id/batalha', autenticar, async (req, res) => {
+  res.json(await historia.iniciarBatalha(req.usuario.id, inteiro(req.params.id, 'Encontro')));
+});
+
+router.post('/historia/trilhas/:trilha/pontos/:ponto/refazer', autenticar, async (req, res) => {
+  const trilha = inteiro(req.params.trilha, 'Trilha');
+  const ponto = inteiro(req.params.ponto, 'Ponto');
+  if (trilha > config.HISTORIA_TRILHAS || ponto > config.HISTORIA_PONTOS_POR_TRILHA) throw new ErroJogo('Ponto inválido.');
+  res.json(await historia.refazerPonto(req.usuario.id, trilha, ponto));
+});
+
+router.post('/historia/encontros/:id/jogadas', autenticar, async (req, res) => {
+  res.json(await historia.jogar(req.usuario.id, inteiro(req.params.id, 'Encontro'), acaoDe(req.body)));
+});
+
+router.post('/historia/encontros/:id/capturar', autenticar, async (req, res) => {
+  res.json(await historia.capturar(req.usuario.id, inteiro(req.params.id, 'Encontro')));
+});
+
+router.post('/historia/encontros/:id/ignorar', autenticar, async (req, res) => {
+  res.json(await historia.ignorar(req.usuario.id, inteiro(req.params.id, 'Encontro')));
+});
+
+// ---------------------------------------------------------------------------
 // Batalhas
 // ---------------------------------------------------------------------------
 
@@ -289,12 +342,7 @@ router.post('/batalhas/:id/responder', autenticar, async (req, res) => {
 });
 
 router.post('/batalhas/:id/jogadas', autenticar, async (req, res) => {
-  const { tipo } = req.body;
-  let acao;
-  if (tipo === 'atacar' || tipo === 'desistir') acao = { tipo };
-  else if (tipo === 'trocar') acao = { tipo, indice: Number(req.body.indice) };
-  else throw new ErroJogo('Jogada inválida.');
-  res.json(await batalhas.jogar(req.usuario.id, inteiro(req.params.id, 'Batalha'), acao));
+  res.json(await batalhas.jogar(req.usuario.id, inteiro(req.params.id, 'Batalha'), acaoDe(req.body)));
 });
 
 // ---------------------------------------------------------------------------

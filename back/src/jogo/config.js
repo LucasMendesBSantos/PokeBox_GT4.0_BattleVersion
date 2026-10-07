@@ -45,6 +45,9 @@ module.exports = {
   // pedra, troca ou amizade não têm nível lá: usamos o nível em que a espécie atual
   // foi alcançada + este valor (Pichu -> Pikachu no 1 + 20 = 21, Pikachu -> Raichu no 21 + 20 = 41).
   NIVEIS_EVOLUCAO_SEM_NIVEL: 20,
+  // Ao evoluir, cada status (PS, Ataque, Defesa, Velocidade) tem a própria chance de ganhar
+  // de minimo a maximo pontos extras, que ficam no card para sempre (somam a cada evolução)
+  BONUS_EVOLUCAO: { chance: 0.3, minimo: 1, maximo: 5 },
 
   // Batalha
   PRAZO_JOGADA_MS: 4 * HORA_MS,
@@ -57,6 +60,12 @@ module.exports = {
   CHANCE_CRITICO: 1 / 16,
   CHANCE_CRITICO_MAIS_RAPIDO: 1 / 8, // quem é mais rápido que o alvo acerta crítico com mais frequência
   MULT_CRITICO: 1.5,
+  MULT_MESMO_TIPO: 1.5, // golpe do mesmo tipo do Pokémon (STAB)
+
+  // Golpes especiais: com o afeto máximo, o Pokémon sorteia GOLPES_POR_POKEMON golpes de dano
+  // entre os que a espécie dele aprende (lista da PokeAPI). A primeira roleta é grátis; as outras custam.
+  GOLPES_POR_POKEMON: 2,
+  CUSTO_ROLETA_GOLPES: 100,
 
   // Afeto: carinho, brincar e alimentar somam pontos; cada AFETO_POR_CORACAO pontos é um coração (máx. 5)
   AFETO_MAXIMO: 500,
@@ -86,6 +95,35 @@ module.exports = {
   // Vitrine
   DESTAQUES_VITRINE: 6,
   BIO_VITRINE_MAXIMO: 160,
+
+  // História: HISTORIA_TRILHAS trilhas de HISTORIA_PONTOS_POR_TRILHA pontos, cada ponto um Pokémon selvagem.
+  // A força cresce HISTORIA_FORCA_POR_PONTO a cada ponto: trilha 1 vai de 0,1x a 1,0x,
+  // trilha 2 de 1,1x a 2,0x... até 5,0x no último ponto da trilha 5.
+  HISTORIA_TRILHAS: 5,
+  HISTORIA_PONTOS_POR_TRILHA: 10,
+  HISTORIA_FORCA_POR_PONTO: 0.1,
+  // "Força normal" (1,0x) = os status da espécie neste nível. 0,1x fica parecido com um nível 1-5.
+  HISTORIA_NIVEL_FORCA_NORMAL: 50,
+  // Vitória: Pokécoins para o treinador e XP (proporcional à força) para todo o time.
+  // A trilha só anda para a frente, então cada ponto paga uma vez só (não dá para farmar).
+  HISTORIA_RECOMPENSA: { pokecoins: 10, xpPorForca: 1000 },
+  // Pontos já vencidos podem ser refeitos quantas vezes quiser, sempre contra um novo Pokémon
+  // aleatório (dá a mesma recompensa). Custa mais do que paga em Pokécoins: compensa pelo XP e pela captura.
+  CUSTO_REFAZER_HISTORIA: 25,
+
+  // Pokébolas: compradas na loja e usadas para capturar os Pokémon derrotados na história
+  PRECO_POKEBOLA: 10,
+  POKEBOLAS_POR_COMPRA_MAXIMO: 99,
+  // A chance de captura vem do capture_rate da espécie na PokeAPI (3 = Mewtwo, 45 = iniciais, 255 = Caterpie).
+  // Cada par é [capture_rate, chance]; entre dois pares a chance segue em linha reta,
+  // e fora da faixa fica no primeiro/último valor
+  CHANCE_CAPTURA: [
+    [3, 0.1], // lendários: o mais difícil
+    [45, 0.2], // iniciais
+    [255, 0.5], // os mais fáceis
+  ],
+  // Depois de tantos erros o Pokémon foge e o ponto pode ser refeito contra um novo
+  TENTATIVAS_CAPTURA_MAXIMO: 10,
 
   // Recompensas
   RECOMPENSA_VENCEDOR: { pokecoins: 40, xp: 150 },

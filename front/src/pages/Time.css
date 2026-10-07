@@ -57,6 +57,17 @@
   color: #555;
 }
 
+.time-slot-evolucao {
+  font-size: 12px;
+  font-weight: 700;
+  color: #555;
+  text-align: center;
+}
+
+.time-slot-evolucao[data-pronto='true'] {
+  color: #1d7a3a;
+}
+
 .time-slot-vazio {
   font-weight: 700;
   color: #888;

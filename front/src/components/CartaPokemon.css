@@ -216,6 +216,27 @@
   list-style: none;
 }
 
+.carta-bonus-evolucao {
+  margin-left: 4px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #1d7a3a;
+  background: #e3f6e8;
+  border-radius: 999px;
+}
+
+.carta-evolucao-resumo {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #555;
+}
+
+.carta-evolucao-resumo[data-pronto='true'] {
+  color: #1d7a3a;
+}
+
 .carta-evolucao-futura {
   font-size: 13px;
   color: #555;

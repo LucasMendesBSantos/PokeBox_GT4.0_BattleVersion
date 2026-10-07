@@ -48,7 +48,7 @@ async function criarSessao(usuarioId) {
  */
 async function usuarioDaSessao(token) {
   const { rows } = await pool.query(
-    `SELECT u.id, u.login, u.pokecoins, u.ultimo_acesso_em
+    `SELECT u.id, u.login, u.pokecoins, u.pokebolas, u.ultimo_acesso_em
        FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id
       WHERE s.token_hash = $1 AND s.expira_em > now()`,
     [hashToken(token)],
@@ -268,6 +268,34 @@ async function comprarPokemonAleatorio(usuarioId, numeroGeracao, rng = rngSeguro
 }
 
 /**
+ * Compra Pokébolas (usadas para capturar Pokémon na história).
+ * @param {number} usuarioId
+ * @param {number} quantidade  1 a POKEBOLAS_POR_COMPRA_MAXIMO
+ */
+async function comprarPokebolas(usuarioId, quantidade) {
+  if (!Number.isSafeInteger(quantidade) || quantidade < 1 || quantidade > config.POKEBOLAS_POR_COMPRA_MAXIMO) {
+    throw new ErroJogo(`Compre de 1 a ${config.POKEBOLAS_POR_COMPRA_MAXIMO} Pokébolas por vez.`);
+  }
+  const custo = quantidade * config.PRECO_POKEBOLA;
+
+  return transacao(async (client) => {
+    // Débito condicional, como na compra de Pokémon: dois cliques não gastam o mesmo saldo
+    const { rows } = await client.query(
+      `UPDATE usuarios SET pokecoins = pokecoins - $2, pokebolas = pokebolas + $3
+        WHERE id = $1 AND pokecoins >= $2
+        RETURNING pokecoins, pokebolas`,
+      [usuarioId, custo, quantidade],
+    );
+    if (!rows[0]) throw new ErroJogo('Pokécoins insuficientes.');
+    await client.query(
+      "INSERT INTO transacoes_pokecoins (usuario_id, valor, motivo) VALUES ($1, $2, 'compra_pokebola')",
+      [usuarioId, -custo],
+    );
+    return { saldo: rows[0].pokecoins, pokebolas: rows[0].pokebolas };
+  });
+}
+
+/**
  * Define o time de batalha na ordem recebida (o primeiro abre a batalha).
  * @param {number} usuarioId
  * @param {number[]} pokemonIds  exatamente TAMANHO_TIME ids diferentes
@@ -314,5 +342,7 @@ module.exports = {
   encerrarSessao,
   escolherInicial,
   comprarPokemonAleatorio,
+  comprarPokebolas,
+  sortearEspecieDaLoja,
   definirTime,
 };

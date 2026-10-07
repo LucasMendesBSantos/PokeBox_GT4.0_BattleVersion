@@ -58,6 +58,7 @@ async function buscarNaPokeApi(id) {
     nome: especie.name,
     tipos: pokemon.types.map((t) => t.type.name),
     raridade: raridadeDe(especie),
+    taxa_captura: especie.capture_rate,
     hp_base: stat('hp'),
     ataque_base: stat('attack'),
     defesa_base: stat('defense'),
@@ -77,19 +78,36 @@ async function buscarNaPokeApi(id) {
  */
 async function garantirEspecie(id) {
   const { rows } = await pool.query('SELECT * FROM especies WHERE id = $1', [id]);
-  if (rows[0]) return rows[0];
+  if (rows[0]) {
+    if (rows[0].taxa_captura == null) rows[0].taxa_captura = await garantirTaxaCaptura(id);
+    return rows[0];
+  }
 
   const e = await buscarNaPokeApi(id);
   // ON CONFLICT: duas pessoas podem mintar a mesma espécie nova ao mesmo tempo
   await pool.query(
-    `INSERT INTO especies (id, nome, tipos, raridade, hp_base, ataque_base, defesa_base, velocidade_base,
+    `INSERT INTO especies (id, nome, tipos, raridade, taxa_captura, hp_base, ataque_base, defesa_base, velocidade_base,
                            altura_base, peso_base, evolucoes)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      ON CONFLICT (id) DO NOTHING`,
-    [e.id, e.nome, e.tipos, e.raridade, e.hp_base, e.ataque_base, e.defesa_base, e.velocidade_base,
+    [e.id, e.nome, e.tipos, e.raridade, e.taxa_captura, e.hp_base, e.ataque_base, e.defesa_base, e.velocidade_base,
       e.altura_base, e.peso_base, JSON.stringify(e.evolucoes)],
   );
   return e;
 }
 
-module.exports = { garantirEspecie, mapearCadeia };
+/**
+ * capture_rate da espécie (especies.taxa_captura). Espécies salvas antes dessa coluna existir
+ * ficam com NULL e são completadas aqui na primeira vez. Chame fora de transação: pode ir à PokeAPI.
+ * @param {number} id
+ */
+async function garantirTaxaCaptura(id) {
+  const { rows } = await pool.query('SELECT taxa_captura FROM especies WHERE id = $1', [id]);
+  if (rows[0]?.taxa_captura != null) return rows[0].taxa_captura;
+
+  const especie = await buscarJson(`${POKEAPI_URL}/pokemon-species/${id}`);
+  await pool.query('UPDATE especies SET taxa_captura = $2 WHERE id = $1', [id, especie.capture_rate]);
+  return especie.capture_rate;
+}
+
+module.exports = { garantirEspecie, garantirTaxaCaptura, mapearCadeia };

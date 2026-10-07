@@ -6,6 +6,7 @@ const MENU = [
   { tela: 'meusPokemons', nome: 'Meus Pokémon' },
   { tela: 'loja', nome: 'Loja' },
   { tela: 'time', nome: 'Time' },
+  { tela: 'historia', nome: 'História' },
   { tela: 'vitrine', nome: 'Vitrine' },
   { tela: 'trocas', nome: 'Trocas' },
   { tela: 'batalhas', nome: 'Batalhas' },
@@ -48,6 +49,10 @@ function Layout({
               <span className="layout-moeda" aria-hidden="true" />
               {`${usuario.pokecoins} Pokécoins`}
             </span>
+            <span className="layout-moedas" title="Pokébolas para capturar Pokémon na história">
+              <span className="layout-pokebola" aria-hidden="true" />
+              {`${usuario.pokebolas ?? 0} Pokébola${usuario.pokebolas === 1 ? '' : 's'}`}
+            </span>
             <button type="button" className="layout-sair" onClick={() => onSair()}>
               Sair
             </button>
@@ -64,6 +69,7 @@ Layout.propTypes = {
   usuario: PropTypes.shape({
     login: PropTypes.string.isRequired,
     pokecoins: PropTypes.number.isRequired,
+    pokebolas: PropTypes.number,
   }).isRequired,
   telaAtual: PropTypes.string.isRequired,
   onNavegar: PropTypes.func.isRequired,

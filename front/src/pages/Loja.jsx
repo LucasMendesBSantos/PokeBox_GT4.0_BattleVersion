@@ -5,6 +5,9 @@ import { formatarNome, formatarNumero } from '../components/tipos';
 import './Loja.css';
 
 const PRECO = 100;
+// Mesmo valor do back (config.PRECO_POKEBOLA)
+const PRECO_POKEBOLA = 10;
+const PACOTES_POKEBOLA = [1, 5, 10];
 
 // Uma loja por geração, cada uma sorteia só entre as espécies do seu intervalo.
 // Mesma lista do back (back/src/jogo/config.js, GERACOES)
@@ -20,7 +23,62 @@ const GERACOES = [
   { numero: 9, regiao: 'Paldea', primeira: 906, ultima: 1025 },
 ];
 
-function Loja({ usuario, onComprar }) {
+// Pokébolas: usadas para capturar os Pokémon derrotados na história
+function LojaPokebolas({ usuario, onComprarPokebolas }) {
+  const [comprando, setComprando] = useState(null);
+  const [erro, setErro] = useState(null);
+  const [aviso, setAviso] = useState(null);
+  const pokebolas = usuario.pokebolas ?? 0;
+
+  const handleComprar = async (quantidade) => {
+    setComprando(quantidade);
+    setErro(null);
+    setAviso(null);
+    try {
+      await onComprarPokebolas(quantidade);
+      setAviso(`${quantidade} Pokébola${quantidade === 1 ? '' : 's'} na mochila!`);
+    } catch (e) {
+      setErro(e.message);
+    } finally {
+      setComprando(null);
+    }
+  };
+
+  return (
+    <div className="loja-pokebolas jogo-painel">
+      <div className="loja-pokebola" aria-hidden="true" data-girando={comprando !== null} />
+      <div className="loja-pokebolas-info">
+        <h2 className="loja-nome">Pokébolas</h2>
+        <p className="loja-intervalo">
+          {`${PRECO_POKEBOLA} Pokécoins cada. Use na História para tentar capturar os Pokémon que você derrotar (15% de chance). `}
+          <strong>{`Você tem ${pokebolas}.`}</strong>
+        </p>
+        <div className="loja-pokebolas-botoes">
+          {PACOTES_POKEBOLA.map((quantidade) => (
+            <button
+              key={quantidade}
+              type="button"
+              className="jogo-botao jogo-botao--azul"
+              disabled={comprando !== null || usuario.pokecoins < quantidade * PRECO_POKEBOLA}
+              onClick={() => handleComprar(quantidade)}
+            >
+              {`${quantidade}x · ${quantidade * PRECO_POKEBOLA}`}
+            </button>
+          ))}
+        </div>
+        {erro && <p className="jogo-erro" role="alert">{erro}</p>}
+        {aviso && <p className="loja-dica" role="status">{aviso}</p>}
+      </div>
+    </div>
+  );
+}
+
+LojaPokebolas.propTypes = {
+  usuario: PropTypes.shape({ pokecoins: PropTypes.number.isRequired, pokebolas: PropTypes.number }).isRequired,
+  onComprarPokebolas: PropTypes.func.isRequired,
+};
+
+function Loja({ usuario, onComprar, onComprarPokebolas }) {
   // Número da geração em sorteio agora (null quando nenhuma)
   const [comprando, setComprando] = useState(null);
   const [erro, setErro] = useState(null);
@@ -62,6 +120,8 @@ function Loja({ usuario, onComprar }) {
           </p>
         )}
       </div>
+
+      <LojaPokebolas usuario={usuario} onComprarPokebolas={onComprarPokebolas} />
 
       <ul className="loja-geracoes">
         {GERACOES.map((g) => {
@@ -116,8 +176,9 @@ function Loja({ usuario, onComprar }) {
 }
 
 Loja.propTypes = {
-  usuario: PropTypes.shape({ pokecoins: PropTypes.number.isRequired }).isRequired,
+  usuario: PropTypes.shape({ pokecoins: PropTypes.number.isRequired, pokebolas: PropTypes.number }).isRequired,
   onComprar: PropTypes.func.isRequired,
+  onComprarPokebolas: PropTypes.func.isRequired,
 };
 
 export default Loja;

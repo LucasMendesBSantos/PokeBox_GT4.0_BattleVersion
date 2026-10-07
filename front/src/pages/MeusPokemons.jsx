@@ -62,12 +62,20 @@ const INICIAIS = [
   },
 ];
 
+// Para a mensagem do bônus da evolução
+const NOMES_STATUS = [
+  { chave: 'hp', nome: 'PS' },
+  { chave: 'ataque', nome: 'Ataque' },
+  { chave: 'defesa', nome: 'Defesa' },
+  { chave: 'velocidade', nome: 'Velocidade' },
+];
+
 function encontrarInicial(id) {
   return INICIAIS.flatMap(({ pokemons }) => pokemons).find((pokemon) => pokemon.id === id) ?? null;
 }
 
 function MeusPokemons({
-  usuario, onEscolherInicial, onEvoluir, onCuidar,
+  usuario, onEscolherInicial, onEvoluir, onCuidar, onRoletarGolpes,
 }) {
   const [escolhido, setEscolhido] = useState(null);
   // Id do Pokémon aberto no cantinho de cuidado
@@ -100,7 +108,13 @@ function MeusPokemons({
 
   const handleEvoluir = (pokemon, evolucao) => executar(async () => {
     const evoluido = await onEvoluir(pokemon.id, evolucao.especieId);
-    setAviso(`${formatarNome(pokemon.nome)} ${formatarNumero(pokemon.mintNumero)} evoluiu para ${formatarNome(evoluido.nome)}!`);
+    const ganhos = NOMES_STATUS
+      .filter(({ chave }) => evoluido.bonusGanho?.[chave] > 0)
+      .map(({ chave, nome }) => `+${evoluido.bonusGanho[chave]} ${nome}`);
+    const bonus = ganhos.length > 0
+      ? ` Bônus da evolução: ${ganhos.join(', ')}.`
+      : ' Desta vez nenhum status ganhou pontos extras.';
+    setAviso(`${formatarNome(pokemon.nome)} ${formatarNumero(pokemon.mintNumero)} evoluiu para ${formatarNome(evoluido.nome)}!${bonus}`);
   });
 
   const renderEscolhaInicial = () => (
@@ -173,7 +187,14 @@ function MeusPokemons({
   );
 
   if (cuidando) {
-    return <CantinhoCuidado pokemon={cuidando} onCuidar={onCuidar} onVoltar={() => setCuidandoId(null)} />;
+    return (
+      <CantinhoCuidado
+        pokemon={cuidando}
+        onCuidar={onCuidar}
+        onRoletarGolpes={onRoletarGolpes}
+        onVoltar={() => setCuidandoId(null)}
+      />
+    );
   }
 
   return (
@@ -192,6 +213,7 @@ MeusPokemons.propTypes = {
   onEscolherInicial: PropTypes.func.isRequired,
   onEvoluir: PropTypes.func.isRequired,
   onCuidar: PropTypes.func.isRequired,
+  onRoletarGolpes: PropTypes.func.isRequired,
 };
 
 export default MeusPokemons;

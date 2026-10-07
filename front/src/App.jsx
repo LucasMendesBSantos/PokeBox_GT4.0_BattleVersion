@@ -11,6 +11,7 @@ import Batalhas from './pages/Batalhas';
 import Batalha from './pages/Batalha';
 import Vitrine from './pages/Vitrine';
 import Trocas from './pages/Trocas';
+import Historia from './pages/Historia';
 import * as api from './services/api';
 
 const TAMANHO_TIME = 3;
@@ -136,6 +137,11 @@ function App() {
           await recarregarUsuario();
           return cuidado;
         }}
+        onRoletarGolpes={async (pokemonId) => {
+          const roleta = await api.roletarGolpes(pokemonId);
+          await recarregarUsuario();
+          return roleta;
+        }}
       />
     ),
     vitrine: () => <Vitrine usuario={usuario} />,
@@ -148,7 +154,14 @@ function App() {
           await recarregarUsuario();
           return compra;
         }}
+        onComprarPokebolas={async (quantidade) => {
+          await api.comprarPokebolas(quantidade);
+          await recarregarUsuario();
+        }}
       />
+    ),
+    historia: () => (
+      <Historia usuario={usuario} onAtualizarUsuario={recarregarUsuario} onIrPara={handleNavegar} />
     ),
     time: () => (
       <Time

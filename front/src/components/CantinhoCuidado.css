@@ -386,3 +386,14 @@
 .cantinho-bem-estar-barra[data-baixo='true'] span {
   background: var(--dex-red);
 }
+
+.cantinho-confirmar {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  background: #fff6c8;
+  border: 2px solid #c99a00;
+  border-radius: 12px;
+}

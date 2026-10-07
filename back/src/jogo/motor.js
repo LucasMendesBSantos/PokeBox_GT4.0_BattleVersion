@@ -3,6 +3,7 @@
 const config = require('./config');
 const { calcularStatus, afetoMaximo } = require('./regras');
 const { rngSeguro, decimalEntre } = require('./aleatorio');
+const { efetividade } = require('./tipos');
 const { ErroJogo } = require('./erros');
 
 /**
@@ -21,6 +22,18 @@ const { ErroJogo } = require('./erros');
  * @property {number} velocidade
  * @property {boolean} afetoMaximo   pode aguentar um golpe letal com 1 PS
  * @property {boolean} resistiu      já usou essa chance nesta batalha
+ * @property {string[]} [tipos]      para o bônus de mesmo tipo e a vantagem de tipo (estados antigos não têm)
+ * @property {GolpeEmBatalha[]} [golpes]  golpes especiais aprendidos com o afeto máximo
+ *
+ * @typedef {object} GolpeEmBatalha
+ * @property {number} id
+ * @property {string} nome
+ * @property {string} tipo
+ * @property {'physical' | 'special'} classe
+ * @property {number} poder
+ * @property {number | null} precisao  null = nunca erra
+ * @property {number} pp       usos que restam nesta batalha
+ * @property {number} ppMax
  *
  * @typedef {object} Lado
  * @property {number} usuarioId
@@ -33,7 +46,8 @@ const { ErroJogo } = require('./erros');
  * @property {[Lado, Lado]} lados
  * @property {0 | 1} vez                 índice do lado que joga agora
  *
- * @typedef {{ tipo: 'atacar' } | { tipo: 'trocar', indice: number } | { tipo: 'desistir' }} Acao
+ * @typedef {{ tipo: 'atacar' } | { tipo: 'golpe', indice: number } | { tipo: 'trocar', indice: number }
+ *   | { tipo: 'desistir' }} Acao
  *
  * @typedef {object} Fim
  * @property {0 | 1} vencedor
@@ -48,7 +62,8 @@ const { ErroJogo } = require('./erros');
 /**
  * Monta um lado da batalha a partir do time do jogador (já na ordem das posições 1 a TAMANHO_TIME).
  * @param {{ id: number, login: string }} usuario
- * @param {{ pokemon: import('./regras').Pokemon & { id: number, mint_numero: number }, especie: import('./regras').Especie }[]} time
+ * @param {{ pokemon: import('./regras').Pokemon & { id: number, mint_numero: number }, especie: import('./regras').Especie,
+ *   golpes?: { id: number, nome: string, tipo: string, classe: string, poder: number, precisao: number | null, pp: number }[] }[]} time
  * @returns {Lado}
  */
 function montarLado(usuario, time) {
@@ -57,7 +72,7 @@ function montarLado(usuario, time) {
     login: usuario.login,
     ativo: 0,
     timeoutsSeguidos: 0,
-    pokemons: time.map(({ pokemon, especie }) => {
+    pokemons: time.map(({ pokemon, especie, golpes = [] }) => {
       const status = calcularStatus(especie, pokemon);
       return {
         pokemonId: pokemon.id,
@@ -73,6 +88,10 @@ function montarLado(usuario, time) {
         velocidade: status.velocidade,
         afetoMaximo: afetoMaximo(pokemon.afeto),
         resistiu: false,
+        tipos: especie.tipos ?? [],
+        golpes: golpes.map((g) => ({
+          id: g.id, nome: g.nome, tipo: g.tipo, classe: g.classe, poder: g.poder, precisao: g.precisao, pp: g.pp, ppMax: g.pp,
+        })),
       };
     }),
   };
@@ -91,22 +110,69 @@ function criarEstado(ladoA, ladoB, rng = rngSeguro) {
   return { lados: [ladoA, ladoB], vez };
 }
 
-/** Dano no estilo dos jogos principais, com poder fixo, variação de 85-100% e crítico */
-function calcularDano(atacante, defensor, rng) {
+/**
+ * Dano no estilo dos jogos principais, com variação de 85-100% e crítico.
+ * O ataque básico tem poder fixo e não tem tipo. Um golpe especial usa o poder dele, ganha
+ * o bônus de mesmo tipo (STAB) e a vantagem de tipo contra o alvo (que pode zerar o dano).
+ * Físico e especial usam o mesmo Ataque e Defesa: os Pokémon do jogo não têm Ataque/Defesa Especial.
+ * @param {GolpeEmBatalha} [golpe]  sem golpe = ataque básico
+ */
+function calcularDano(atacante, defensor, rng, golpe = null) {
+  const multiplicadorTipo = golpe ? efetividade(golpe.tipo, defensor.tipos) : 1;
+  if (multiplicadorTipo === 0) return { dano: 0, critico: false, efetividade: 0 };
+
   const chanceCritico = atacante.velocidade > defensor.velocidade
     ? config.CHANCE_CRITICO_MAIS_RAPIDO
     : config.CHANCE_CRITICO;
   const critico = rng() < chanceCritico;
 
+  const poder = golpe ? golpe.poder : config.PODER_ATAQUE;
+  const stab = golpe && atacante.tipos?.includes(golpe.tipo) ? config.MULT_MESMO_TIPO : 1;
   const base = Math.floor(
-    (Math.floor((2 * atacante.nivel) / 5 + 2) * config.PODER_ATAQUE * atacante.ataque) / defensor.defesa / 50,
+    (Math.floor((2 * atacante.nivel) / 5 + 2) * poder * atacante.ataque) / defensor.defesa / 50,
   ) + 2;
   const variacao = decimalEntre(rng, 0.85, 1);
-  const dano = Math.max(1, Math.floor(base * variacao * (critico ? config.MULT_CRITICO : 1)));
-  return { dano, critico };
+  const multiplicador = variacao * (critico ? config.MULT_CRITICO : 1) * stab * multiplicadorTipo;
+  const dano = Math.max(1, Math.floor(base * multiplicador));
+  return { dano, critico, efetividade: multiplicadorTipo };
 }
 
 const outro = (indice) => (indice === 0 ? 1 : 0);
+
+/**
+ * O Pokémon em campo do jogador acerta o do oponente (ataque básico ou golpe especial).
+ * Altera o estado e os eventos recebidos.
+ * @returns {Fim | null}  fim da batalha, se foi o último nocaute
+ */
+function acertar(estado, indiceJogador, golpe, eventos, rng) {
+  const eu = estado.lados[indiceJogador];
+  const oponente = estado.lados[outro(indiceJogador)];
+  const atacante = eu.pokemons[eu.ativo];
+  const defensor = oponente.pokemons[oponente.ativo];
+  const { dano, critico, efetividade: multiplicadorTipo } = calcularDano(atacante, defensor, rng, golpe);
+  // Afeto máximo: chance de aguentar firme com 1 PS, uma vez por batalha (estados antigos não têm o campo)
+  const resistiu = dano > 0 && dano >= defensor.hp && defensor.afetoMaximo && !defensor.resistiu
+    && rng() < config.CHANCE_RESISTIR_AFETO_MAXIMO;
+  defensor.hp = resistiu ? 1 : Math.max(0, defensor.hp - dano);
+  eventos.push({
+    tipo: 'dano', lado: indiceJogador, atacante: atacante.pokemonId, alvo: defensor.pokemonId,
+    dano, critico, hpRestante: defensor.hp,
+    ...(golpe && { golpe: golpe.nome, tipoGolpe: golpe.tipo, efetividade: multiplicadorTipo }),
+  });
+  if (resistiu) {
+    defensor.resistiu = true;
+    eventos.push({ tipo: 'resistiu', lado: outro(indiceJogador), pokemonId: defensor.pokemonId });
+  }
+
+  if (defensor.hp > 0) return null;
+  eventos.push({ tipo: 'nocaute', lado: outro(indiceJogador), pokemonId: defensor.pokemonId });
+  // O próximo vivo entra sozinho, para não gastar um turno (e mais 4h) só escolhendo quem entra
+  const proximo = oponente.pokemons.findIndex((p) => p.hp > 0);
+  if (proximo === -1) return { vencedor: indiceJogador, motivo: 'nocaute' };
+  oponente.ativo = proximo;
+  eventos.push({ tipo: 'entrou', lado: outro(indiceJogador), indice: proximo });
+  return null;
+}
 
 /**
  * Aplica a jogada de um jogador.
@@ -133,31 +199,20 @@ function aplicarAcao(estadoAtual, indiceJogador, acao, rng = rngSeguro) {
   }
 
   if (acao.tipo === 'atacar') {
+    const fim = acertar(estado, indiceJogador, null, eventos, rng);
+    if (fim) return { estado, eventos, fim };
+  } else if (acao.tipo === 'golpe') {
     const atacante = eu.pokemons[eu.ativo];
-    const defensor = oponente.pokemons[oponente.ativo];
-    const { dano, critico } = calcularDano(atacante, defensor, rng);
-    // Afeto máximo: chance de aguentar firme com 1 PS, uma vez por batalha (estados antigos não têm o campo)
-    const resistiu = dano >= defensor.hp && defensor.afetoMaximo && !defensor.resistiu
-      && rng() < config.CHANCE_RESISTIR_AFETO_MAXIMO;
-    defensor.hp = resistiu ? 1 : Math.max(0, defensor.hp - dano);
-    eventos.push({
-      tipo: 'dano', lado: indiceJogador, atacante: atacante.pokemonId, alvo: defensor.pokemonId,
-      dano, critico, hpRestante: defensor.hp,
-    });
-    if (resistiu) {
-      defensor.resistiu = true;
-      eventos.push({ tipo: 'resistiu', lado: outro(indiceJogador), pokemonId: defensor.pokemonId });
-    }
-
-    if (defensor.hp === 0) {
-      eventos.push({ tipo: 'nocaute', lado: outro(indiceJogador), pokemonId: defensor.pokemonId });
-      // O próximo vivo entra sozinho, para não gastar um turno (e mais 4h) só escolhendo quem entra
-      const proximo = oponente.pokemons.findIndex((p) => p.hp > 0);
-      if (proximo === -1) {
-        return { estado, eventos, fim: { vencedor: indiceJogador, motivo: 'nocaute' } };
-      }
-      oponente.ativo = proximo;
-      eventos.push({ tipo: 'entrou', lado: outro(indiceJogador), indice: proximo });
+    const golpe = atacante.golpes?.[acao.indice];
+    if (!golpe) throw new ErroJogo('Golpe inválido.');
+    if (golpe.pp <= 0) throw new ErroJogo('Esse golpe não tem mais PP nesta batalha.');
+    golpe.pp -= 1;
+    // Precisão em %: null nunca erra
+    if (golpe.precisao !== null && rng() * 100 >= golpe.precisao) {
+      eventos.push({ tipo: 'errou', lado: indiceJogador, atacante: atacante.pokemonId, golpe: golpe.nome });
+    } else {
+      const fim = acertar(estado, indiceJogador, golpe, eventos, rng);
+      if (fim) return { estado, eventos, fim };
     }
   } else if (acao.tipo === 'trocar') {
     const escolhido = eu.pokemons[acao.indice];

@@ -11,6 +11,8 @@ CREATE TABLE usuarios (
   senha_hash  TEXT NOT NULL,
   -- O CHECK impede saldo negativo mesmo se duas compras concorrerem
   pokecoins   INTEGER NOT NULL DEFAULT 0 CHECK (pokecoins >= 0),
+  -- Compradas na loja, gastas tentando capturar Pokémon na história
+  pokebolas   INTEGER NOT NULL DEFAULT 0 CHECK (pokebolas >= 0),
   criado_em   TIMESTAMPTZ NOT NULL DEFAULT now(),
   -- Última vez que usou o jogo (atualizado no máximo a cada 5 min). Alimenta a lista de treinadores ativos.
   ultimo_acesso_em  TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -39,6 +41,9 @@ CREATE TABLE especies (
   nome             TEXT NOT NULL,
   tipos            TEXT[] NOT NULL,
   raridade         TEXT NOT NULL CHECK (raridade IN ('comum', 'lendario', 'mitico')),
+  -- capture_rate da PokeAPI (3 = mais difícil, 255 = mais fácil); define a chance de captura na história.
+  -- NULL = espécie salva antes da coluna existir (o back completa na primeira vez)
+  taxa_captura     SMALLINT CHECK (taxa_captura BETWEEN 0 AND 255),
   hp_base          SMALLINT NOT NULL,
   ataque_base      SMALLINT NOT NULL,
   defesa_base      SMALLINT NOT NULL,
@@ -48,7 +53,20 @@ CREATE TABLE especies (
   -- Próximas espécies e o nível pedido para cada uma (Eevee tem várias):
   -- [{ "especieId": 5, "nome": "charmeleon", "nivel": 16 }]
   evolucoes        JSONB NOT NULL DEFAULT '[]',
+  -- Ids dos golpes que a espécie aprende (PokeAPI). NULL = ainda não buscado (só busca na primeira roleta)
+  movimentos       INTEGER[],
   atualizado_em    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Golpes (cache da PokeAPI). Os sem dano (status) também ficam, com poder NULL, para não buscar de novo.
+CREATE TABLE golpes (
+  id        INTEGER PRIMARY KEY,                -- mesmo id da PokeAPI
+  nome      TEXT NOT NULL,                      -- "razor-leaf"
+  tipo      TEXT NOT NULL,
+  classe    TEXT NOT NULL CHECK (classe IN ('physical', 'special', 'status')),
+  poder     SMALLINT,                           -- NULL = não causa dano
+  precisao  SMALLINT,                           -- em %; NULL = nunca erra
+  pp        SMALLINT NOT NULL                   -- usos por batalha
 );
 
 -- ---------------------------------------------------------------------------
@@ -66,7 +84,7 @@ CREATE TABLE pokemons (
   dono_id              BIGINT NOT NULL REFERENCES usuarios(id),
   especie_id           INTEGER NOT NULL REFERENCES especies(id),  -- muda ao evoluir
   especie_original_id  INTEGER NOT NULL REFERENCES especies(id),  -- espécie em que foi mintado
-  origem               TEXT NOT NULL CHECK (origem IN ('inicial', 'loja')),
+  origem               TEXT NOT NULL CHECK (origem IN ('inicial', 'loja', 'captura')),
 
   -- Atributos sorteados no mint: nunca mudam, nem ao evoluir
   shiny                BOOLEAN NOT NULL,
@@ -96,6 +114,13 @@ CREATE TABLE pokemons (
   bem_estar_em         TIMESTAMPTZ NOT NULL DEFAULT now(),
   -- Posição entre os destaques da vitrine (1 a 6) ou NULL se não está exposto
   posicao_vitrine      SMALLINT CHECK (posicao_vitrine BETWEEN 1 AND 6),
+  -- Pontos extras sorteados nas evoluções (somam a cada evolução)
+  bonus_hp             SMALLINT NOT NULL DEFAULT 0 CHECK (bonus_hp >= 0),
+  bonus_ataque         SMALLINT NOT NULL DEFAULT 0 CHECK (bonus_ataque >= 0),
+  bonus_defesa         SMALLINT NOT NULL DEFAULT 0 CHECK (bonus_defesa >= 0),
+  bonus_velocidade     SMALLINT NOT NULL DEFAULT 0 CHECK (bonus_velocidade >= 0),
+  -- Golpes especiais sorteados na roleta (liberada com o afeto máximo), ids da tabela golpes
+  golpes               INTEGER[] NOT NULL DEFAULT '{}',
 
   criado_em            TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (dono_id, posicao_time),
@@ -170,12 +195,53 @@ CREATE TABLE batalha_acoes (
   batalha_id  BIGINT NOT NULL REFERENCES batalhas(id),
   turno       INTEGER NOT NULL,
   jogador_id  BIGINT NOT NULL REFERENCES usuarios(id),
-  tipo        TEXT NOT NULL CHECK (tipo IN ('atacar', 'trocar', 'passar', 'desistir')),
+  tipo        TEXT NOT NULL CHECK (tipo IN ('atacar', 'golpe', 'trocar', 'passar', 'desistir')),
   automatica  BOOLEAN NOT NULL DEFAULT false,   -- true = feita pelo sistema por timeout
   eventos     JSONB NOT NULL,                   -- dano, crítico, nocautes... para a animação no front
   criada_em   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX batalha_acoes_batalha_idx ON batalha_acoes (batalha_id, id);
+
+-- ---------------------------------------------------------------------------
+-- História (trilhas de Pokémon selvagens)
+-- ---------------------------------------------------------------------------
+
+-- Cada linha é um Pokémon selvagem encontrado num ponto da trilha. O primeiro de cada ponto (revanche = false)
+-- é o que faz a trilha andar: só existe um 'encontrado' por vez, o próximo ponto depois dos vencidos, e ele não
+-- muda se o treinador perder. Vencido, pode ser capturado (vira um card com os mesmos atributos e nível) em até
+-- 10 tentativas; depois disso foge (ou o treinador o ignora). Capturado, fugido ou ignorado, o ponto pode ser refeito: cada revanche é uma nova
+-- linha com um Pokémon aleatório, e quem perde uma revanche vê o Pokémon fugir.
+CREATE TABLE historia_encontros (
+  id                  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  usuario_id          BIGINT NOT NULL REFERENCES usuarios(id),
+  trilha              SMALLINT NOT NULL CHECK (trilha BETWEEN 1 AND 5),
+  ponto               SMALLINT NOT NULL CHECK (ponto BETWEEN 1 AND 10),
+  especie_id          INTEGER NOT NULL REFERENCES especies(id),
+  forca               NUMERIC(3, 1) NOT NULL,          -- multiplicador dos status (0,1x a 5,0x)
+  nivel               SMALLINT NOT NULL CHECK (nivel BETWEEN 1 AND 100),
+  shiny               BOOLEAN NOT NULL,
+  iv_hp               SMALLINT NOT NULL CHECK (iv_hp BETWEEN 0 AND 31),
+  iv_ataque           SMALLINT NOT NULL CHECK (iv_ataque BETWEEN 0 AND 31),
+  iv_defesa           SMALLINT NOT NULL CHECK (iv_defesa BETWEEN 0 AND 31),
+  iv_velocidade       SMALLINT NOT NULL CHECK (iv_velocidade BETWEEN 0 AND 31),
+  mult_altura         NUMERIC(4, 3) NOT NULL CHECK (mult_altura BETWEEN 0.8 AND 1.2),
+  mult_peso           NUMERIC(4, 3) NOT NULL CHECK (mult_peso BETWEEN 0.8 AND 1.2),
+  status              TEXT NOT NULL DEFAULT 'encontrado'
+                      CHECK (status IN ('encontrado', 'vencido', 'capturado', 'fugiu', 'ignorado')),
+  revanche            BOOLEAN NOT NULL DEFAULT false,  -- true = batalha extra num ponto já vencido
+  estado              JSONB,                           -- batalha em andamento (NULL fora dela)
+  log                 JSONB NOT NULL DEFAULT '[]',     -- turnos da última batalha: [{ lado, eventos }]
+  recompensa          JSONB,                           -- { pokecoins, xp, subiram } da vitória
+  tentativas_captura  SMALLINT NOT NULL DEFAULT 0,
+  pokemon_id          BIGINT REFERENCES pokemons(id),  -- card criado na captura
+  criado_em           TIMESTAMPTZ NOT NULL DEFAULT now(),
+  vencido_em          TIMESTAMPTZ
+);
+-- O primeiro encontro de cada ponto é único, e só um deles fica aberto por vez
+CREATE UNIQUE INDEX historia_primeiro_encontro_idx ON historia_encontros (usuario_id, trilha, ponto) WHERE NOT revanche;
+CREATE UNIQUE INDEX historia_encontro_aberto_idx ON historia_encontros (usuario_id)
+  WHERE status = 'encontrado' AND NOT revanche;
+CREATE INDEX historia_encontros_ponto_idx ON historia_encontros (usuario_id, trilha, ponto, id DESC);
 
 -- ---------------------------------------------------------------------------
 -- Trocas entre jogadores
@@ -228,7 +294,9 @@ CREATE TABLE transacoes_pokecoins (
   id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   usuario_id  BIGINT NOT NULL REFERENCES usuarios(id),
   valor       INTEGER NOT NULL,              -- positivo = ganho, negativo = gasto
-  motivo      TEXT NOT NULL CHECK (motivo IN ('bonus_cadastro', 'compra_loja', 'recompensa_batalha', 'compra_mercado', 'venda_mercado', 'troca')),
+  motivo      TEXT NOT NULL CHECK (motivo IN ('bonus_cadastro', 'compra_loja', 'recompensa_batalha', 'compra_mercado', 'venda_mercado', 'troca',
+                                       'compra_pokebola', 'recompensa_historia', 'refazer_historia',
+                                       'roleta_golpes')),
   batalha_id  BIGINT REFERENCES batalhas(id), -- preenchido quando motivo = recompensa_batalha
   anuncio_id  BIGINT REFERENCES anuncios(id), -- preenchido nas compras e trocas do mercado
   criado_em   TIMESTAMPTZ NOT NULL DEFAULT now()
