@@ -15,6 +15,14 @@ const SUSPENSE_CAPTURA_MS = 900;
 const esperar = (ms) => new Promise((resolver) => { setTimeout(resolver, ms); });
 const formatarForca = (forca) => `${forca.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}x`;
 // Mesma conta do back (regras.forcaDoPonto): trilha 1 vai de 0,1x a 1,0x, trilha 2 de 1,1x a 2,0x...
+// Faixas da chance de captura (10% nos lendários, 20% nos iniciais, até 50% nos mais fáceis)
+function dificuldadeCaptura(chance) {
+  if (chance < 0.2) return { nivel: 'muito-dificil', texto: 'muito difícil' };
+  if (chance < 0.3) return { nivel: 'dificil', texto: 'difícil' };
+  if (chance < 0.4) return { nivel: 'media', texto: 'média' };
+  return { nivel: 'facil', texto: 'fácil' };
+}
+
 const forcaDoPonto = (trilha, ponto, pontosPorTrilha) => ((trilha - 1) * pontosPorTrilha + ponto) / 10;
 
 // Posição de cada ponto na trilha em "S": 5 por linha, a segunda linha volta da direita para a esquerda
@@ -172,6 +180,7 @@ const formatoEncontro = PropTypes.shape({
   }).isRequired,
   situacao: PropTypes.oneOf(['encontrado', 'vencido', 'capturado', 'fugiu', 'ignorado']).isRequired,
   revanche: PropTypes.bool,
+  chanceCaptura: PropTypes.number,
   tentativasCaptura: PropTypes.number.isRequired,
   tentativasRestantes: PropTypes.number,
 });
@@ -362,14 +371,32 @@ function Historia({ usuario, onAtualizarUsuario, onIrPara }) {
         )}
         {selecionado.situacao === 'vencido' && (
           <>
+            {selecionado.chanceCaptura != null && (
+              <div className="historia-taxa" data-dificuldade={dificuldadeCaptura(selecionado.chanceCaptura).nivel}>
+                <span className="historia-taxa-rotulo">{`Taxa de captura de ${formatarNome(selecionado.nome)}`}</span>
+                <span className="historia-taxa-valor">
+                  {`${Math.round(selecionado.chanceCaptura * 100)}%`}
+                  <small>{` por Pokébola · ${dificuldadeCaptura(selecionado.chanceCaptura).texto}`}</small>
+                </span>
+                <span
+                  className="historia-taxa-barra"
+                  role="meter"
+                  aria-label="Taxa de captura"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(selecionado.chanceCaptura * 100)}
+                >
+                  <span style={{ width: `${selecionado.chanceCaptura * 100}%` }} />
+                </span>
+              </div>
+            )}
             <p>
-              {selecionado.chanceCaptura != null && `Chance de captura: ${Math.round(selecionado.chanceCaptura * 100)}% · `}
               {`Tentativas restantes: ${selecionado.tentativasRestantes} de ${tentativasCaptura}`}
               {` · Você tem ${pokebolas} Pokébola${pokebolas === 1 ? '' : 's'}.`}
             </p>
             <div className="historia-captura-botoes">
               <button type="button" className="jogo-botao" disabled={capturando || pokebolas === 0} onClick={handleCapturar}>
-                {capturando ? 'Balançando...' : 'Jogar Pokébola'}
+                {capturando ? 'Balançando...' : `Jogar Pokébola${selecionado.chanceCaptura != null ? ` (${Math.round(selecionado.chanceCaptura * 100)}%)` : ''}`}
               </button>
               {pokebolas === 0 && (
                 <button type="button" className="jogo-botao jogo-botao--azul" onClick={() => onIrPara('loja')}>

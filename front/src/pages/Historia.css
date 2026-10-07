@@ -309,6 +309,54 @@
   font-weight: 700;
 }
 
+/* Taxa de captura do Pokémon selecionado: número grande, faixa de dificuldade e barra (0 a 100%) */
+.historia-taxa {
+  --taxa-cor: #1d7a3a;
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  background: #fff;
+  border: 2px solid var(--taxa-cor);
+  border-radius: 10px;
+}
+
+.historia-taxa[data-dificuldade='media'] { --taxa-cor: #b07a00; }
+.historia-taxa[data-dificuldade='dificil'] { --taxa-cor: #c4501a; }
+.historia-taxa[data-dificuldade='muito-dificil'] { --taxa-cor: #8a0c20; }
+
+.historia-taxa-rotulo {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.historia-taxa-valor {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--taxa-cor);
+}
+
+.historia-taxa-valor small {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.historia-taxa-barra {
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  background: #e3e7f0;
+  border-radius: 4px;
+}
+
+.historia-taxa-barra > span {
+  display: block;
+  height: 100%;
+  background: var(--taxa-cor);
+}
+
 .historia-captura-botoes {
   display: flex;
   flex-wrap: wrap;
