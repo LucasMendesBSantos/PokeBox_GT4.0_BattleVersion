@@ -66,6 +66,8 @@ module.exports = {
   // entre os que a espécie dele aprende (lista da PokeAPI). A primeira roleta é grátis; as outras custam.
   GOLPES_POR_POKEMON: 2,
   CUSTO_ROLETA_GOLPES: 100,
+  // Atalho: libera os golpes sem o afeto máximo, já com a primeira roleta (vale para aquele card)
+  CUSTO_DESBLOQUEIO_GOLPES: 200,
 
   // Afeto: carinho, brincar e alimentar somam pontos; cada AFETO_POR_CORACAO pontos é um coração (máx. 5)
   AFETO_MAXIMO: 500,
@@ -104,9 +106,16 @@ module.exports = {
   HISTORIA_FORCA_POR_PONTO: 0.1,
   // "Força normal" (1,0x) = os status da espécie neste nível. 0,1x fica parecido com um nível 1-5.
   HISTORIA_NIVEL_FORCA_NORMAL: 50,
-  // Vitória: Pokécoins para o treinador e XP (proporcional à força) para todo o time.
-  // A trilha só anda para a frente, então cada ponto paga uma vez só (não dá para farmar).
-  HISTORIA_RECOMPENSA: { pokecoins: 10, xpPorForca: 1000 },
+  // Vitória: Pokécoins para o treinador e XP para todo o time. O XP é progressivo:
+  //   xp = xpPorForca * força + xpPorForcaAoQuadrado * força²
+  // então cada ponto paga mais que o anterior e as lutas difíceis pagam proporcionalmente mais
+  // (0,1x dá 515 XP, 1,0x dá 6.500, 2,0x dá 16.000, 5,0x dá 62.500).
+  // Sem revanches, a trilha 1 leva o time a uns nível 26, a trilha 2 a uns 55, a 3 a uns 87 e a 4 ao 100.
+  // Revanches pagam de novo, mas custam mais Pokécoins do que dão (CUSTO_REFAZER_HISTORIA)
+  // e dão só uma parte do XP (multXpRevanche): o XP cheio é para quem avança na trilha.
+  HISTORIA_RECOMPENSA: {
+    pokecoins: 10, xpPorForca: 5000, xpPorForcaAoQuadrado: 1500, multXpRevanche: 0.5,
+  },
   // Pontos já vencidos podem ser refeitos quantas vezes quiser, sempre contra um novo Pokémon
   // aleatório (dá a mesma recompensa). Custa mais do que paga em Pokécoins: compensa pelo XP e pela captura.
   CUSTO_REFAZER_HISTORIA: 25,

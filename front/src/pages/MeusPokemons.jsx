@@ -2,10 +2,17 @@ import { useState } from 'react';
 import PropTypes from 'prop-types';
 import CartaPokemon from '../components/CartaPokemon';
 import CantinhoCuidado from '../components/CantinhoCuidado';
+import FiltrosColecao from '../components/FiltrosColecao';
+import {
+  filtrarEOrdenar, lerFiltros, salvarFiltros, tiposDaColecao,
+} from '../components/colecao';
 import { formatoPokemon } from '../components/formatos';
 import { formatarNome, formatarNumero } from '../components/tipos';
 import { urlArtwork } from '../services/pokeapi';
 import './MeusPokemons.css';
+
+// Os filtros escolhidos ficam salvos neste navegador para a próxima visita
+const CHAVE_FILTROS = 'pokebox-filtros-colecao';
 
 // Em todas as gerações os iniciais vêm na ordem planta, fogo e água
 const TIPOS_INICIAIS = [
@@ -75,7 +82,7 @@ function encontrarInicial(id) {
 }
 
 function MeusPokemons({
-  usuario, onEscolherInicial, onEvoluir, onCuidar, onRoletarGolpes,
+  usuario, onEscolherInicial, onEvoluir, onCuidar, onRoletarGolpes, onDesbloquearGolpes,
 }) {
   const [escolhido, setEscolhido] = useState(null);
   // Id do Pokémon aberto no cantinho de cuidado
@@ -83,6 +90,12 @@ function MeusPokemons({
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState(null);
   const [aviso, setAviso] = useState(null);
+  const [filtros, setFiltros] = useState(() => lerFiltros(CHAVE_FILTROS));
+
+  const mudarFiltros = (novos) => {
+    setFiltros(novos);
+    salvarFiltros(CHAVE_FILTROS, novos);
+  };
 
   const inicialEscolhido = encontrarInicial(escolhido);
   const cuidando = usuario.pokemons.find((pokemon) => pokemon.id === cuidandoId);
@@ -158,6 +171,8 @@ function MeusPokemons({
     </section>
   );
 
+  const visiveis = filtrarEOrdenar(usuario.pokemons, filtros);
+
   const renderColecao = () => (
     <section>
       <h2 className="meus-pokemons-titulo-secao">Meus Pokémon</h2>
@@ -167,8 +182,20 @@ function MeusPokemons({
         Dê carinho, brinque e alimente seus Pokémon para ganhar corações de afeto.
       </p>
 
+      <FiltrosColecao
+        filtros={filtros}
+        onMudar={mudarFiltros}
+        tipos={tiposDaColecao(usuario.pokemons)}
+        mostrando={visiveis.length}
+        total={usuario.pokemons.length}
+      />
+
+      {visiveis.length === 0 && (
+        <p className="meus-pokemons-texto">Nenhum Pokémon combina com esses filtros.</p>
+      )}
+
       <ul className="meus-pokemons-grade">
-        {usuario.pokemons.map((pokemon) => (
+        {visiveis.map((pokemon) => (
           <li key={pokemon.id}>
             <CartaPokemon
               pokemon={pokemon}
@@ -192,6 +219,7 @@ function MeusPokemons({
         pokemon={cuidando}
         onCuidar={onCuidar}
         onRoletarGolpes={onRoletarGolpes}
+        onDesbloquearGolpes={onDesbloquearGolpes}
         onVoltar={() => setCuidandoId(null)}
       />
     );
@@ -214,6 +242,7 @@ MeusPokemons.propTypes = {
   onEvoluir: PropTypes.func.isRequired,
   onCuidar: PropTypes.func.isRequired,
   onRoletarGolpes: PropTypes.func.isRequired,
+  onDesbloquearGolpes: PropTypes.func.isRequired,
 };
 
 export default MeusPokemons;

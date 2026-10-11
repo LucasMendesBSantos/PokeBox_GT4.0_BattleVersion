@@ -1,5 +1,5 @@
 // Chamadas aos endpoints do jogo no back (/api/...)
-const BACK_URL = import.meta.env.VITE_BACK_URL ?? 'http://localhost:8080';
+const BACK_URL = import.meta.env.VITE_BACK_URL ?? '';
 const CHAVE_TOKEN = 'pokebox-token';
 
 // O token fica no localStorage para o login sobreviver a um F5.
@@ -99,6 +99,7 @@ export const evoluir = (pokemonId, especieId) => chamar('POST', `/pokemons/${pok
 export const cuidar = (pokemonId, tipo) => chamar('POST', `/pokemons/${pokemonId}/cuidar`, { tipo });
 export const listarCuidados = (pokemonId) => chamar('GET', `/pokemons/${pokemonId}/cuidados`);
 export const roletarGolpes = (pokemonId) => chamar('POST', `/pokemons/${pokemonId}/golpes/roletar`);
+export const desbloquearGolpes = (pokemonId) => chamar('POST', `/pokemons/${pokemonId}/golpes/desbloquear`);
 export const buscarTreinadores = (busca) => chamar('GET', `/treinadores?busca=${encodeURIComponent(busca)}`);
 export const listarTreinadoresAtivos = () => chamar('GET', '/treinadores/ativos');
 

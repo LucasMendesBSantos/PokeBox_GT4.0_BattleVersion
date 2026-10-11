@@ -25,6 +25,13 @@ function dificuldadeCaptura(chance) {
 
 const forcaDoPonto = (trilha, ponto, pontosPorTrilha) => ((trilha - 1) * pontosPorTrilha + ponto) / 10;
 
+// Mesma conta do back (regras.xpDaHistoria): o XP cresce mais rápido que a força
+// (na revanche, multiplicado por multXpRevanche)
+const xpDoPonto = (forca, { xpPorForca, xpPorForcaAoQuadrado, multXpRevanche }, revanche) => Math.round(
+  (xpPorForca * forca + xpPorForcaAoQuadrado * forca * forca) * (revanche ? multXpRevanche : 1),
+);
+const formatarMilhar = (numero) => numero.toLocaleString('pt-BR');
+
 // Posição de cada ponto na trilha em "S": 5 por linha, a segunda linha volta da direita para a esquerda
 function posicaoNaTrilha(ponto, porLinha = 5) {
   const linha = Math.floor((ponto - 1) / porLinha);
@@ -455,6 +462,14 @@ function Historia({ usuario, onAtualizarUsuario, onIrPara }) {
   if (pontoSelecionado) {
     const forca = forcaDoPonto(trilha, pontoSelecionado, pontosPorTrilha);
     const cabecalho = `Ponto ${pontoSelecionado} · Força ${formatarForca(forca)}`;
+    // Ponto já vencido: as próximas batalhas são revanches, com XP reduzido
+    const revanche = Boolean(selecionado?.pontoVencido);
+    const recompensa = (
+      <p className="historia-painel-recompensa" data-revanche={revanche}>
+        {`${revanche ? 'Revanche' : 'Vitória'}: +${formatarMilhar(xpDoPonto(forca, historia.recompensa, revanche))} XP para cada Pokémon do time · +${historia.recompensa.pokecoins} Pokécoins`}
+        {revanche && ` (metade do XP da primeira vitória, que foi de ${formatarMilhar(xpDoPonto(forca, historia.recompensa, false))})`}
+      </p>
+    );
     if (selecionado) {
       const { status } = selecionado;
       painel = (
@@ -466,6 +481,7 @@ function Historia({ usuario, onAtualizarUsuario, onIrPara }) {
           />
           <div className="historia-painel-info">
             <p className="historia-painel-ponto">{cabecalho}</p>
+            {recompensa}
             <h2>
               {formatarNome(selecionado.nome)}
               {selecionado.shiny && ' ★'}
@@ -512,7 +528,7 @@ function Historia({ usuario, onAtualizarUsuario, onIrPara }) {
             )}
             {['capturado', 'fugiu', 'ignorado'].includes(selecionado.situacao) && (
               <div className="historia-refazer">
-                <p>{`Refaça este ponto contra um novo Pokémon aleatório por ${custoRefazer} Pokécoins. A vitória paga a recompensa de novo e você pode tentar capturá-lo.`}</p>
+                <p>{`Refaça este ponto contra um novo Pokémon aleatório por ${custoRefazer} Pokécoins. A vitória dá os Pokécoins e metade do XP da primeira vez, e você pode tentar capturá-lo.`}</p>
                 {!temTime && <p className="jogo-aviso">{`Monte um time com ${TAMANHO_TIME} Pokémon para batalhar.`}</p>}
                 <button
                   type="button"
@@ -533,6 +549,7 @@ function Historia({ usuario, onAtualizarUsuario, onIrPara }) {
           <span className="historia-painel-misterio" aria-hidden="true">?</span>
           <div className="historia-painel-info">
             <p className="historia-painel-ponto">{cabecalho}</p>
+            {recompensa}
             <h2>Mato alto</h2>
             <p>Alguma coisa está se mexendo por aqui... Explore para encontrar o Pokémon selvagem deste ponto.</p>
             <button type="button" className="jogo-botao" disabled={enviando} onClick={handleExplorar}>
@@ -547,6 +564,7 @@ function Historia({ usuario, onAtualizarUsuario, onIrPara }) {
           <span className="historia-painel-misterio" aria-hidden="true">?</span>
           <div className="historia-painel-info">
             <p className="historia-painel-ponto">{cabecalho}</p>
+            {recompensa}
             <h2>Caminho bloqueado</h2>
             <p>Vença os pontos anteriores para chegar até aqui.</p>
           </div>

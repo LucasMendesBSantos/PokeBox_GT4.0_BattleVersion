@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import CartaPokemon from '../components/CartaPokemon';
+import FiltrosColecao from '../components/FiltrosColecao';
+import {
+  filtrarEOrdenar, lerFiltros, salvarFiltros, tiposDaColecao,
+} from '../components/colecao';
 import { formatoPokemon, resumoEvolucao } from '../components/formatos';
 import { formatarNome, formatarNumero } from '../components/tipos';
 import { urlArtwork } from '../services/pokeapi';
 import './Time.css';
 
 const TAMANHO_TIME = 3;
+// Filtro próprio desta tela, salvo neste navegador (separado do de Meus Pokémon)
+const CHAVE_FILTROS = 'pokebox-filtros-time';
 
 const timeAtual = (pokemons) => pokemons
   .filter((p) => p.posicaoTime)
@@ -19,8 +25,20 @@ function Time({ usuario, onSalvar, onIrParaLoja }) {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState(null);
   const [aviso, setAviso] = useState(null);
+  const [filtros, setFiltros] = useState(() => lerFiltros(CHAVE_FILTROS));
+
+  const mudarFiltros = (novos) => {
+    setFiltros(novos);
+    salvarFiltros(CHAVE_FILTROS, novos);
+  };
 
   const porId = new Map(usuario.pokemons.map((p) => [p.id, p]));
+  // "Só do time" olha o time sendo montado na tela, mesmo antes de salvar
+  const comPosicaoAtual = usuario.pokemons.map((p) => {
+    const posicao = selecionados.indexOf(p.id);
+    return { ...p, posicaoTime: posicao === -1 ? null : posicao + 1 };
+  });
+  const visiveis = filtrarEOrdenar(comPosicaoAtual, filtros);
   const salvo = timeAtual(usuario.pokemons);
   const mudou = selecionados.join() !== salvo.join();
 
@@ -124,13 +142,21 @@ function Time({ usuario, onSalvar, onIrParaLoja }) {
       {aviso && <p className="jogo-aviso" role="status">{aviso}</p>}
 
       <h2 className="time-subtitulo">Coleção</h2>
+      <FiltrosColecao
+        filtros={filtros}
+        onMudar={mudarFiltros}
+        tipos={tiposDaColecao(usuario.pokemons)}
+        mostrando={visiveis.length}
+        total={usuario.pokemons.length}
+      />
+      {visiveis.length === 0 && <p className="jogo-texto">Nenhum Pokémon combina com esses filtros.</p>}
       <ul className="time-grade">
-        {usuario.pokemons.map((pokemon) => {
+        {visiveis.map((pokemon) => {
           const posicao = selecionados.indexOf(pokemon.id);
           const cheio = posicao === -1 && selecionados.length >= TAMANHO_TIME;
           return (
             <li key={pokemon.id} className="time-opcao" data-no-time={posicao !== -1}>
-              <CartaPokemon pokemon={{ ...pokemon, posicaoTime: posicao === -1 ? null : posicao + 1 }} compacto>
+              <CartaPokemon pokemon={pokemon} compacto>
                 <button
                   type="button"
                   className="jogo-botao jogo-botao--claro time-escolher"

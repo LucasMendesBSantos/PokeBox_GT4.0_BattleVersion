@@ -84,40 +84,39 @@ async function sortearGolpes(especieId, rng) {
   return escolhidos;
 }
 
-async function conferirPokemon(clientOuPool, usuarioId, pokemonId, { travar = false } = {}) {
+/** Golpes liberados: pelo afeto máximo ou pelo desbloqueio pago */
+const golpesLiberados = (pokemon) => afetoMaximo(pokemon.afeto) || pokemon.golpes_desbloqueados;
+
+async function buscarPokemon(clientOuPool, usuarioId, pokemonId, { travar = false } = {}) {
   const { rows } = await clientOuPool.query(
-    `SELECT dono_id, especie_id, afeto, golpes FROM pokemons WHERE id = $1${travar ? ' FOR UPDATE' : ''}`,
+    `SELECT dono_id, especie_id, afeto, golpes, golpes_desbloqueados FROM pokemons WHERE id = $1${travar ? ' FOR UPDATE' : ''}`,
     [pokemonId],
   );
   const pokemon = rows[0];
   if (!pokemon || pokemon.dono_id !== usuarioId) throw new ErroJogo('Pokémon não encontrado.');
-  if (!afetoMaximo(pokemon.afeto)) {
-    throw new ErroJogo('Os golpes especiais só são liberados com o afeto máximo (5 corações).');
-  }
   return pokemon;
 }
 
 /**
- * Roleta de golpes: troca os golpes do Pokémon por GOLPES_POR_POKEMON golpes de dano sorteados entre
- * os que a espécie atual aprende. Só com afeto máximo; a primeira é grátis e as outras custam CUSTO_ROLETA_GOLPES.
- * @param {number} usuarioId
- * @param {number} pokemonId
+ * Sorteia os golpes (fora da transação, pode ir à PokeAPI), cobra e grava. O que muda entre a
+ * roleta e o desbloqueio vem em `regras`: o que conferir no card, o custo e o motivo no extrato.
  */
-async function roletarGolpes(usuarioId, pokemonId, rng = rngSeguro) {
-  const antes = await conferirPokemon(pool, usuarioId, pokemonId);
-  const custo = antes.golpes.length > 0 ? config.CUSTO_ROLETA_GOLPES : 0;
+async function sortearECobrar(usuarioId, pokemonId, regras, rng) {
+  const antes = await buscarPokemon(pool, usuarioId, pokemonId);
+  regras.conferir(antes);
+  const custo = regras.custo(antes);
   if (custo > 0) {
     const { rows } = await pool.query('SELECT pokecoins FROM usuarios WHERE id = $1', [usuarioId]);
-    if (rows[0].pokecoins < custo) throw new ErroJogo(`Roletar de novo custa ${custo} Pokécoins.`);
+    if (rows[0].pokecoins < custo) throw new ErroJogo(regras.semSaldo(custo));
   }
 
-  // Fora da transação: pode precisar ir à PokeAPI
   const golpes = await sortearGolpes(antes.especie_id, rng);
   if (golpes.length === 0) throw new ErroJogo('Esse Pokémon não aprende nenhum golpe que cause dano.');
 
   return transacao(async (client) => {
     // Confere de novo com o card travado: pode ter evoluído, sido trocado ou roletado em outra aba
-    const pokemon = await conferirPokemon(client, usuarioId, pokemonId, { travar: true });
+    const pokemon = await buscarPokemon(client, usuarioId, pokemonId, { travar: true });
+    regras.conferir(pokemon);
     if (pokemon.especie_id !== antes.especie_id || pokemon.golpes.join() !== antes.golpes.join()) {
       throw new ErroJogo('Esse Pokémon mudou enquanto a roleta girava. Tente de novo.');
     }
@@ -126,17 +125,58 @@ async function roletarGolpes(usuarioId, pokemonId, rng = rngSeguro) {
         'UPDATE usuarios SET pokecoins = pokecoins - $2 WHERE id = $1 AND pokecoins >= $2 RETURNING id',
         [usuarioId, custo],
       );
-      if (!debito.rows[0]) throw new ErroJogo(`Roletar de novo custa ${custo} Pokécoins.`);
+      if (!debito.rows[0]) throw new ErroJogo(regras.semSaldo(custo));
       await client.query(
-        "INSERT INTO transacoes_pokecoins (usuario_id, valor, motivo) VALUES ($1, $2, 'roleta_golpes')",
-        [usuarioId, -custo],
+        'INSERT INTO transacoes_pokecoins (usuario_id, valor, motivo) VALUES ($1, $2, $3)',
+        [usuarioId, -custo, regras.motivo],
       );
     }
-    await client.query('UPDATE pokemons SET golpes = $2 WHERE id = $1', [pokemonId, golpes]);
+    await client.query(
+      'UPDATE pokemons SET golpes = $2, golpes_desbloqueados = golpes_desbloqueados OR $3 WHERE id = $1',
+      [pokemonId, golpes, regras.desbloquear ?? false],
+    );
     return { pokemon: await buscarCard(client, pokemonId), custo };
   });
 }
 
+/**
+ * Roleta de golpes: troca os golpes do Pokémon por GOLPES_POR_POKEMON golpes de dano sorteados entre
+ * os que a espécie atual aprende. Só com os golpes liberados (afeto máximo ou desbloqueio);
+ * a primeira é grátis e as outras custam CUSTO_ROLETA_GOLPES.
+ * @param {number} usuarioId
+ * @param {number} pokemonId
+ */
+async function roletarGolpes(usuarioId, pokemonId, rng = rngSeguro) {
+  return sortearECobrar(usuarioId, pokemonId, {
+    conferir: (pokemon) => {
+      if (!golpesLiberados(pokemon)) {
+        throw new ErroJogo(
+          `Os golpes especiais são liberados com o afeto máximo (5 corações) ou desbloqueando por ${config.CUSTO_DESBLOQUEIO_GOLPES} Pokécoins.`,
+        );
+      }
+    },
+    custo: (pokemon) => (pokemon.golpes.length > 0 ? config.CUSTO_ROLETA_GOLPES : 0),
+    semSaldo: (custo) => `Roletar de novo custa ${custo} Pokécoins.`,
+    motivo: 'roleta_golpes',
+  }, rng);
+}
+
+/**
+ * Atalho pago: libera os golpes do card sem o afeto máximo e já faz a primeira roleta.
+ * Depois disso o card segue as regras normais (roletar de novo custa CUSTO_ROLETA_GOLPES).
+ */
+async function desbloquearGolpes(usuarioId, pokemonId, rng = rngSeguro) {
+  return sortearECobrar(usuarioId, pokemonId, {
+    conferir: (pokemon) => {
+      if (golpesLiberados(pokemon)) throw new ErroJogo('Os golpes especiais desse Pokémon já estão liberados.');
+    },
+    custo: () => config.CUSTO_DESBLOQUEIO_GOLPES,
+    semSaldo: (custo) => `Desbloquear os golpes custa ${custo} Pokécoins.`,
+    motivo: 'desbloqueio_golpes',
+    desbloquear: true,
+  }, rng);
+}
+
 module.exports = {
-  garantirGolpe, garantirMovimentos, roletarGolpes, causaDano,
+  garantirGolpe, garantirMovimentos, roletarGolpes, desbloquearGolpes, causaDano,
 };

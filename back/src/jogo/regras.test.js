@@ -163,7 +163,14 @@ test('Pokémon selvagem: status da força normal vezes a força, nível acompanh
   assert.equal(nivelSelvagem(0.1), 5);
   assert.equal(nivelSelvagem(1), 50);
   assert.equal(nivelSelvagem(3.5), config.NIVEL_MAXIMO);
-  assert.equal(xpDaHistoria(0.1), 100);
+  // XP progressivo: 5000 * força + 1500 * força²
+  assert.equal(xpDaHistoria(0.1), 515);
+  assert.equal(xpDaHistoria(1), 6500);
+  assert.equal(xpDaHistoria(2), 16000);
+  assert.equal(xpDaHistoria(5), 62500);
+  // Revanche: metade
+  assert.equal(xpDaHistoria(1, true), 3250);
+  assert.equal(xpDaHistoria(0.1, true), 258);
 });
 
 test('bônus da evolução: cada status sorteia a própria chance de ganhar de 1 a 5 pontos', () => {

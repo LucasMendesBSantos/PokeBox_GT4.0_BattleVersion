@@ -66,20 +66,23 @@ BarraBemEstar.propTypes = { nome: PropTypes.string.isRequired, valor: PropTypes.
 const RELOGIO_MS = 30 * 1000;
 
 // Golpes especiais: liberados com o afeto máximo, sorteados entre os que a espécie aprende
-function CartaoGolpes({ pokemon, nome, onRoletar }) {
+function CartaoGolpes({
+  pokemon, nome, onRoletar, onDesbloquear,
+}) {
   const [girando, setGirando] = useState(false);
-  const [confirmar, setConfirmar] = useState(false);
+  // 'roleta' ou 'desbloqueio' esperando confirmação (os dois gastam Pokécoins)
+  const [confirmar, setConfirmar] = useState(null);
   const [mensagem, setMensagem] = useState(null);
   const [erro, setErro] = useState(null);
   const { golpes, custoRoletaGolpes: custo } = pokemon;
 
-  const handleRoletar = async () => {
+  const handleRoletar = async (acao = onRoletar) => {
     setGirando(true);
     setErro(null);
     setMensagem(null);
-    setConfirmar(false);
+    setConfirmar(null);
     try {
-      const { pokemon: atualizado } = await onRoletar(pokemon.id);
+      const { pokemon: atualizado } = await acao(pokemon.id);
       const nomes = atualizado.golpes.map((g) => formatarNome(g.nome)).join(' e ');
       setMensagem(`${nome} aprendeu ${nomes}!`);
     } catch (e) {
@@ -92,10 +95,31 @@ function CartaoGolpes({ pokemon, nome, onRoletar }) {
   return (
     <section className="cantinho-cartao">
       <h3>Golpes especiais</h3>
-      {!pokemon.afeto.maximo ? (
-        <p className="cantinho-dica">
-          {`Com o afeto máximo (5 ♥), ${nome} poderá girar a roleta e aprender 2 golpes entre os que a espécie dele aprende.`}
-        </p>
+      {!pokemon.golpesLiberados ? (
+        <>
+          <p className="cantinho-dica">
+            {`Com o afeto máximo (5 ♥), ${nome} poderá girar a roleta e aprender 2 golpes entre os que a espécie dele aprende.`}
+          </p>
+          {erro && <p className="jogo-erro" role="alert">{erro}</p>}
+          {confirmar === 'desbloqueio' ? (
+            <div className="cantinho-confirmar">
+              <span>{`Libera os golpes de ${nome} agora, sem esperar o afeto máximo, e já gira a primeira roleta. Custa ${pokemon.custoDesbloqueioGolpes} Pokécoins.`}</span>
+              <button type="button" className="jogo-botao" disabled={girando} onClick={() => handleRoletar(onDesbloquear)}>
+                Confirmar
+              </button>
+              <button type="button" className="jogo-botao jogo-botao--claro" onClick={() => setConfirmar(null)}>Cancelar</button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="jogo-botao jogo-botao--azul"
+              disabled={girando}
+              onClick={() => setConfirmar('desbloqueio')}
+            >
+              {girando ? 'Girando a roleta...' : `Desbloquear agora · ${pokemon.custoDesbloqueioGolpes} Pokécoins`}
+            </button>
+          )}
+        </>
       ) : (
         <>
           {golpes.length > 0 ? (
@@ -105,18 +129,18 @@ function CartaoGolpes({ pokemon, nome, onRoletar }) {
           )}
           {mensagem && <p className="cantinho-dica" role="status"><strong>{mensagem}</strong></p>}
           {erro && <p className="jogo-erro" role="alert">{erro}</p>}
-          {confirmar ? (
+          {confirmar === 'roleta' ? (
             <div className="cantinho-confirmar">
               <span>{`Os golpes atuais serão trocados por 2 novos sorteados. Custa ${custo} Pokécoins.`}</span>
-              <button type="button" className="jogo-botao" disabled={girando} onClick={handleRoletar}>Confirmar</button>
-              <button type="button" className="jogo-botao jogo-botao--claro" onClick={() => setConfirmar(false)}>Cancelar</button>
+              <button type="button" className="jogo-botao" disabled={girando} onClick={() => handleRoletar()}>Confirmar</button>
+              <button type="button" className="jogo-botao jogo-botao--claro" onClick={() => setConfirmar(null)}>Cancelar</button>
             </div>
           ) : (
             <button
               type="button"
               className="jogo-botao jogo-botao--azul"
               disabled={girando}
-              onClick={() => (custo > 0 ? setConfirmar(true) : handleRoletar())}
+              onClick={() => (custo > 0 ? setConfirmar('roleta') : handleRoletar())}
             >
               {girando && 'Girando a roleta...'}
               {!girando && (custo > 0 ? `Roletar de novo · ${custo} Pokécoins` : 'Girar a roleta (grátis)')}
@@ -132,10 +156,11 @@ CartaoGolpes.propTypes = {
   pokemon: formatoPokemon.isRequired,
   nome: PropTypes.string.isRequired,
   onRoletar: PropTypes.func.isRequired,
+  onDesbloquear: PropTypes.func.isRequired,
 };
 
 function CantinhoCuidado({
-  pokemon, onCuidar, onRoletarGolpes, onVoltar,
+  pokemon, onCuidar, onRoletarGolpes, onDesbloquearGolpes, onVoltar,
 }) {
   const nome = formatarNome(pokemon.nome);
   const [historico, setHistorico] = useState([]);
@@ -277,7 +302,7 @@ function CantinhoCuidado({
             </dl>
           </section>
 
-          <CartaoGolpes pokemon={pokemon} nome={nome} onRoletar={onRoletarGolpes} />
+          <CartaoGolpes pokemon={pokemon} nome={nome} onRoletar={onRoletarGolpes} onDesbloquear={onDesbloquearGolpes} />
 
           <section className="cantinho-cartao">
             <h3>Últimos cuidados</h3>
@@ -316,6 +341,7 @@ CantinhoCuidado.propTypes = {
   pokemon: formatoPokemon.isRequired,
   onCuidar: PropTypes.func.isRequired,
   onRoletarGolpes: PropTypes.func.isRequired,
+  onDesbloquearGolpes: PropTypes.func.isRequired,
   onVoltar: PropTypes.func.isRequired,
 };
 

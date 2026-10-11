@@ -502,7 +502,7 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
     assert.equal(resposta.batalha.fim.vencedor, 0);
     assert.deepEqual(
       { pokecoins: resposta.batalha.recompensa.pokecoins, xp: resposta.batalha.recompensa.xp },
-      { pokecoins: 10, xp: 100 },
+      { pokecoins: 10, xp: 515 },
     );
     assert.equal(resposta.encontro.situacao, 'vencido');
     assert.equal(resposta.encontro.batalha, null);
@@ -511,7 +511,7 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
       `SELECT xp FROM pokemons
         WHERE dono_id = (SELECT id FROM usuarios WHERE lower(login) = 'ash') AND posicao_time IS NOT NULL`,
     );
-    assert.deepEqual(xpDoTime.map((p) => p.xp), [100, 100, 100]);
+    assert.deepEqual(xpDoTime.map((p) => p.xp), [515, 515, 515]);
     assert.equal(await saldo(ash.token), 980);
     assert.equal((await api('POST', `/historia/encontros/${encontro.id}/jogadas`, { ...ash, corpo: { tipo: 'atacar' } })).status, 400);
     assert.deepEqual((await api('GET', '/historia', ash)).dados.proximo, { trilha: 1, ponto: 2, forca: 0.2 });
@@ -577,6 +577,7 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
       revanche = (await api('POST', `/historia/encontros/${idRevanche}/jogadas`, { ...ash, corpo: { tipo: 'atacar' } })).dados;
     }
     assert.equal(revanche.batalha.fim.vencedor, 0);
+    assert.equal(revanche.batalha.recompensa.xp, 258); // metade dos 515 da primeira vez
     assert.equal(revanche.encontro.situacao, 'vencido');
     assert.equal(await saldo(ash.token), 85);
     let historia = (await api('GET', '/historia', ash)).dados;
@@ -623,6 +624,21 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
     // Sem afeto máximo não libera
     await pool.query('UPDATE pokemons SET afeto = 400, golpes = $2 WHERE id = $1', [primeiro.id, []]);
     assert.match((await roletar()).dados.erro, /afeto máximo/);
+
+    // ...a não ser pagando o desbloqueio, que já faz a primeira roleta
+    const segundoDoTime = (await api('GET', '/eu', ash)).dados.pokemons.find((p) => p.posicaoTime === 2);
+    const desbloquear = () => api('POST', `/pokemons/${segundoDoTime.id}/golpes/desbloquear`, ash);
+    await pool.query('UPDATE pokemons SET afeto = 0, golpes = $2 WHERE id = $1', [segundoDoTime.id, []]);
+    await pool.query("UPDATE usuarios SET pokecoins = 150 WHERE lower(login) = 'ash'");
+    assert.match((await desbloquear()).dados.erro, /200 Pokécoins/);
+    await pool.query("UPDATE usuarios SET pokecoins = 250 WHERE lower(login) = 'ash'");
+    const desbloqueio = await desbloquear();
+    assert.equal(desbloqueio.status, 200, JSON.stringify(desbloqueio.dados));
+    assert.equal(desbloqueio.dados.custo, 200);
+    assert.equal(desbloqueio.dados.pokemon.golpesLiberados, true);
+    assert.equal(desbloqueio.dados.pokemon.golpes.length, 2);
+    assert.equal(await saldo(ash.token), 50);
+    assert.match((await desbloquear()).dados.erro, /já estão liberados/);
 
     // Primeira roleta grátis: 2 golpes de dano da lista da espécie (PokeAPI)
     await pool.query('UPDATE pokemons SET afeto = 500 WHERE id = $1', [primeiro.id]);

@@ -60,6 +60,8 @@ export const formatoPokemon = PropTypes.shape({
     pp: PropTypes.number.isRequired,
   })),
   custoRoletaGolpes: PropTypes.number,
+  golpesLiberados: PropTypes.bool,
+  custoDesbloqueioGolpes: PropTypes.number,
   evolucoes: PropTypes.arrayOf(PropTypes.shape({
     especieId: PropTypes.number.isRequired,
     nome: PropTypes.string.isRequired,

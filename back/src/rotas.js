@@ -166,6 +166,10 @@ router.post('/pokemons/:id/golpes/roletar', autenticar, async (req, res) => {
   res.json(await golpes.roletarGolpes(req.usuario.id, inteiro(req.params.id, 'Pokémon')));
 });
 
+router.post('/pokemons/:id/golpes/desbloquear', autenticar, async (req, res) => {
+  res.json(await golpes.desbloquearGolpes(req.usuario.id, inteiro(req.params.id, 'Pokémon')));
+});
+
 router.get('/pokemons/:id/cuidados', autenticar, async (req, res) => {
   res.json(await pokemons.listarCuidados(req.usuario.id, inteiro(req.params.id, 'Pokémon')));
 });

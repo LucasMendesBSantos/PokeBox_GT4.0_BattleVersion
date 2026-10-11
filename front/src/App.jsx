@@ -142,6 +142,11 @@ function App() {
           await recarregarUsuario();
           return roleta;
         }}
+        onDesbloquearGolpes={async (pokemonId) => {
+          const desbloqueio = await api.desbloquearGolpes(pokemonId);
+          await recarregarUsuario();
+          return desbloqueio;
+        }}
       />
     ),
     vitrine: () => <Vitrine usuario={usuario} />,

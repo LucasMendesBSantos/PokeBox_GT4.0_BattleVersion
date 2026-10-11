@@ -121,6 +121,8 @@ CREATE TABLE pokemons (
   bonus_velocidade     SMALLINT NOT NULL DEFAULT 0 CHECK (bonus_velocidade >= 0),
   -- Golpes especiais sorteados na roleta (liberada com o afeto máximo), ids da tabela golpes
   golpes               INTEGER[] NOT NULL DEFAULT '{}',
+  -- true = golpes liberados pagando, sem precisar do afeto máximo
+  golpes_desbloqueados BOOLEAN NOT NULL DEFAULT false,
 
   criado_em            TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (dono_id, posicao_time),
@@ -296,7 +298,7 @@ CREATE TABLE transacoes_pokecoins (
   valor       INTEGER NOT NULL,              -- positivo = ganho, negativo = gasto
   motivo      TEXT NOT NULL CHECK (motivo IN ('bonus_cadastro', 'compra_loja', 'recompensa_batalha', 'compra_mercado', 'venda_mercado', 'troca',
                                        'compra_pokebola', 'recompensa_historia', 'refazer_historia',
-                                       'roleta_golpes')),
+                                       'roleta_golpes', 'desbloqueio_golpes')),
   batalha_id  BIGINT REFERENCES batalhas(id), -- preenchido quando motivo = recompensa_batalha
   anuncio_id  BIGINT REFERENCES anuncios(id), -- preenchido nas compras e trocas do mercado
   criado_em   TIMESTAMPTZ NOT NULL DEFAULT now()

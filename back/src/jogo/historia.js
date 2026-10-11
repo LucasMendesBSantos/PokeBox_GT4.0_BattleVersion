@@ -152,6 +152,8 @@ async function obterHistoria(usuarioId) {
     pontosPorTrilha: config.HISTORIA_PONTOS_POR_TRILHA,
     tentativasCaptura: config.TENTATIVAS_CAPTURA_MAXIMO,
     custoRefazer: config.CUSTO_REFAZER_HISTORIA,
+    // Para o front mostrar a recompensa de cada ponto antes da luta (mesma conta de regras.xpDaHistoria)
+    recompensa: config.HISTORIA_RECOMPENSA,
     vencidos: totais.vencidos,
     capturados: totais.capturados,
     proximo: proximo && { ...proximo, forca: forcaDoPonto(proximo.trilha, proximo.ponto) },
@@ -230,14 +232,14 @@ function jogarTurno(estado, acao, log, rng) {
 }
 
 /** Pokécoins para o treinador e XP para todos os Pokémon do time, tendo lutado ou não */
-async function premiar(client, usuarioId, estado, forca) {
+async function premiar(client, usuarioId, estado, { forca, revanche }) {
   const { pokecoins } = config.HISTORIA_RECOMPENSA;
   await client.query('UPDATE usuarios SET pokecoins = pokecoins + $2 WHERE id = $1', [usuarioId, pokecoins]);
   await client.query(
     "INSERT INTO transacoes_pokecoins (usuario_id, valor, motivo) VALUES ($1, $2, 'recompensa_historia')",
     [usuarioId, pokecoins],
   );
-  const xp = xpDaHistoria(forca);
+  const xp = xpDaHistoria(forca, revanche);
   const ids = estado.lados[TREINADOR].pokemons.map((p) => p.pokemonId);
   const subiram = await darXp(client, usuarioId, ids, xp);
   return { pokecoins, xp, subiram };
@@ -259,7 +261,7 @@ async function concluirTurno(client, encontro, usuarioId, { estado, log, fim }) 
       [encontro.id, estado, logJson],
     );
   } else if (fim.vencedor === TREINADOR) {
-    recompensa = await premiar(client, usuarioId, estado, encontro.forca);
+    recompensa = await premiar(client, usuarioId, estado, encontro);
     await client.query(
       `UPDATE historia_encontros
           SET status = CASE WHEN status = 'encontrado' THEN 'vencido' ELSE status END,

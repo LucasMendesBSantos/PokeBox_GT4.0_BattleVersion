@@ -307,8 +307,15 @@ function chanceDeCaptura(taxaCaptura) {
   return pontos.at(-1)[1];
 }
 
-/** XP que cada Pokémon do time ganha ao vencer um ponto da história */
-const xpDaHistoria = (forca) => Math.round(config.HISTORIA_RECOMPENSA.xpPorForca * forca);
+/**
+ * XP que cada Pokémon do time ganha ao vencer um ponto da história (cresce mais rápido que a força).
+ * Numa revanche (ponto já vencido) é multiplicado por multXpRevanche.
+ */
+function xpDaHistoria(forca, revanche = false) {
+  const { xpPorForca, xpPorForcaAoQuadrado, multXpRevanche } = config.HISTORIA_RECOMPENSA;
+  const cheio = xpPorForca * forca + xpPorForcaAoQuadrado * forca * forca;
+  return Math.round(revanche ? cheio * multXpRevanche : cheio);
+}
 
 /**
  * Card pronto para o front, a partir de uma linha de pokemons + especies (SELECT p.*, e.*)
@@ -349,6 +356,9 @@ function descreverPokemon(linha) {
       id: g.id, nome: g.nome, tipo: g.tipo, classe: g.classe, poder: g.poder, precisao: g.precisao, pp: g.pp,
     })),
     custoRoletaGolpes: linha.golpes?.length > 0 ? config.CUSTO_ROLETA_GOLPES : 0,
+    // Liberados pelo afeto máximo ou pelo desbloqueio pago (custoDesbloqueioGolpes)
+    golpesLiberados: afetoMaximo(linha.afeto) || Boolean(linha.golpes_desbloqueados),
+    custoDesbloqueioGolpes: config.CUSTO_DESBLOQUEIO_GOLPES,
     ...bemEstarAtual(linha),
     cuidadosDisponiveisEm: disponibilidadeCuidados(linha.ultimos_cuidados),
     evolucoes: especie.evolucoes.map((evolucao) => ({
