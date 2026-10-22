@@ -1,0 +1,36 @@
+# Produção: só back + banco (o front fica na Vercel)
+# Copie .env.example para .env, troque a senha e rode: docker compose -f docker-compose.prod.yml up -d --build
+# O back fica em localhost:8080; exponha-o com https (Cloudflare Tunnel, Caddy, ngrok...) e use essa URL no VITE_BACK_URL da Vercel
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pokebox}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-pokebox}
+    # Sem "ports": o banco só é acessível pela rede interna do Docker
+    volumes:
+      # Roda o db.sql só na primeira vez (quando o volume está vazio)
+      - ./db/db.sql:/docker-entrypoint-initdb.d/01-db.sql:ro
+      - dados:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  back:
+    build: ./back
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-pokebox}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-pokebox}
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  dados:

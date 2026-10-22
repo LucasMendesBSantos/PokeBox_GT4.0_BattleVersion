@@ -1,5 +1,6 @@
 // As chamadas passam pelo back, que repassa para https://pokeapi.co/api/v2
-const BACK_URL = import.meta.env.VITE_BACK_URL ?? '';
+// Na Vercel, VITE_BACK_URL aponta para o back público (ex.: https://api.meusite.com); a barra final é ignorada
+const BACK_URL = (import.meta.env.VITE_BACK_URL ?? '').replace(/\/+$/, '');
 const API_URL = `${BACK_URL}/api/pokeapi`;
 const SPRITES_URL = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
 const ARTWORK_URL = `${SPRITES_URL}/other/official-artwork`;
