@@ -33,7 +33,8 @@
 
 .loja-geracoes {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+  /* 140px: duas gerações por linha mesmo no celular */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr));
   gap: 16px;
   margin: 0;
   padding: 0;

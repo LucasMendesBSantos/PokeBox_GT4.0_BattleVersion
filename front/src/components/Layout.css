@@ -238,12 +238,74 @@
 }
 
 @media (max-width: 720px) {
+  .layout-topo-conteudo {
+    gap: 8px 10px;
+    padding: 8px 12px 0;
+  }
+
+  .layout-marca {
+    gap: 8px;
+  }
+
+  .layout-lente {
+    width: 26px;
+    height: 26px;
+    border-width: 3px;
+  }
+
   .layout-titulo {
     font-size: 22px;
   }
 
+  .layout-usuario {
+    gap: 6px;
+    font-size: 13px;
+  }
+
+  .layout-moedas {
+    padding: 3px 8px 3px 4px;
+  }
+
+  /* Só o número ao lado da moeda e da Pokébola (o title ainda diz o que é) */
+  .layout-rotulo {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .layout-sair {
+    padding: 4px 10px;
+    font-size: 13px;
+  }
+
+  /* Menu numa linha só que rola de lado, em vez de 3 linhas de botões */
   .layout-menu {
     order: 3;
-    width: 100%;
+    flex-wrap: nowrap;
+    width: calc(100% + 24px);
+    margin: 0 -12px;
+    padding: 2px 12px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .layout-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .layout-menu-item {
+    flex-shrink: 0;
+    font-size: 13px;
+  }
+}
+
+/* Telas bem estreitas: o nome do treinador sai do topo para caber o saldo e o Sair */
+@media (max-width: 380px) {
+  .layout-usuario > span:first-child {
+    display: none;
   }
 }

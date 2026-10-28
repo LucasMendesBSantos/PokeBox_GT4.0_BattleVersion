@@ -22,6 +22,9 @@ function useRetanguloAlvo(alvo) {
     const inicial = elemento?.getBoundingClientRect();
     if (inicial && (inicial.top < 0 || inicial.bottom > window.innerHeight)) {
       elemento.scrollIntoView({ block: 'center' });
+    } else if (inicial && (inicial.left < 0 || inicial.right > window.innerWidth)) {
+      // Botão escondido na faixa do menu, que no celular rola de lado
+      elemento.scrollIntoView({ block: 'nearest', inline: 'center' });
     }
     medir();
     window.addEventListener('resize', medir);

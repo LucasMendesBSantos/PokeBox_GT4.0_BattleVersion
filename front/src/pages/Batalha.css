@@ -273,3 +273,33 @@
   align-items: center;
   gap: 4px 8px;
 }
+
+/* Celulares estreitos: Pokémon menor e caixa de PS flexível para o campo caber na tela */
+@media (max-width: 400px) {
+  .batalha-campo {
+    padding: 12px;
+  }
+
+  .batalha-ativo {
+    gap: 6px;
+  }
+
+  .batalha-ativo img {
+    width: 84px;
+  }
+
+  .batalha-ativo-info {
+    min-width: 0;
+    flex: 1;
+    padding: 8px 10px;
+  }
+
+  .batalha-ativo-info strong {
+    font-size: 16px;
+  }
+
+  .batalha-lado,
+  .batalha-ativo {
+    width: 100%;
+  }
+}

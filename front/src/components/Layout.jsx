@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import './Layout.css';
 
@@ -20,6 +21,16 @@ function Layout({
   onSair,
   children,
 }) {
+  const menuRef = useRef(null);
+
+  // No celular o menu é uma faixa que rola de lado: mantém a tela atual à vista
+  useEffect(() => {
+    const menu = menuRef.current;
+    const atual = menu?.querySelector('[aria-current="page"]');
+    if (!atual || menu.scrollWidth <= menu.clientWidth) return;
+    menu.scrollTo({ left: atual.offsetLeft - (menu.clientWidth - atual.offsetWidth) / 2 });
+  }, [telaAtual]);
+
   return (
     <div className="layout-page">
       <header className="layout-topo">
@@ -29,7 +40,7 @@ function Layout({
             <span className="layout-titulo">PokeBox</span>
           </div>
 
-          <nav className="layout-menu" aria-label="Menu" data-tutorial="menu">
+          <nav ref={menuRef} className="layout-menu" aria-label="Menu" data-tutorial="menu">
             {MENU.map(({ tela, nome }) => (
               <button
                 key={tela}
@@ -48,11 +59,14 @@ function Layout({
             <span>{usuario.login}</span>
             <span className="layout-moedas" title="Pokécoins">
               <span className="layout-moeda" aria-hidden="true" />
-              {`${usuario.pokecoins} Pokécoins`}
+              {usuario.pokecoins}
+              {/* No celular só o número aparece, a moeda já diz o que é */}
+              <span className="layout-rotulo"> Pokécoins</span>
             </span>
             <span className="layout-moedas" title="Pokébolas para capturar Pokémon na história">
               <span className="layout-pokebola" aria-hidden="true" />
-              {`${usuario.pokebolas ?? 0} Pokébola${usuario.pokebolas === 1 ? '' : 's'}`}
+              {usuario.pokebolas ?? 0}
+              <span className="layout-rotulo">{` Pokébola${usuario.pokebolas === 1 ? '' : 's'}`}</span>
             </span>
             <button type="button" className="layout-sair" onClick={() => onSair()}>
               Sair
