@@ -3,6 +3,8 @@ import PropTypes from 'prop-types';
 import CartaPokemon from '../components/CartaPokemon';
 import CantinhoCuidado from '../components/CantinhoCuidado';
 import FiltrosColecao from '../components/FiltrosColecao';
+import Tutorial from '../components/Tutorial';
+import { PASSOS_CUIDADOS, cuidadosVistos, marcarCuidadosVistos } from '../components/passosTutorial';
 import {
   filtrarEOrdenar, lerFiltros, salvarFiltros, tiposDaColecao,
 } from '../components/colecao';
@@ -83,6 +85,7 @@ function encontrarInicial(id) {
 
 function MeusPokemons({
   usuario, onEscolherInicial, onEvoluir, onCuidar, onRoletarGolpes, onDesbloquearGolpes,
+  tutorialGeralAberto = false,
 }) {
   const [escolhido, setEscolhido] = useState(null);
   // Id do Pokémon aberto no cantinho de cuidado
@@ -91,6 +94,15 @@ function MeusPokemons({
   const [erro, setErro] = useState(null);
   const [aviso, setAviso] = useState(null);
   const [filtros, setFiltros] = useState(() => lerFiltros(CHAVE_FILTROS));
+  const [passoCuidados, setPassoCuidados] = useState(0);
+  // Aberto de novo pelo botão "Como cuidar", mesmo já tendo visto
+  const [revendoCuidados, setRevendoCuidados] = useState(false);
+
+  const fecharTutorialCuidados = () => {
+    marcarCuidadosVistos(usuario.id);
+    setRevendoCuidados(false);
+    setPassoCuidados(0);
+  };
 
   const mudarFiltros = (novos) => {
     setFiltros(novos);
@@ -182,6 +194,17 @@ function MeusPokemons({
         Dê carinho, brinque e alimente seus Pokémon para ganhar corações de afeto.
       </p>
 
+      <button
+        type="button"
+        className="jogo-botao jogo-botao--azul meus-pokemons-como-cuidar"
+        onClick={() => {
+          setPassoCuidados(0);
+          setRevendoCuidados(true);
+        }}
+      >
+        Como cuidar dos Pokémon
+      </button>
+
       <FiltrosColecao
         filtros={filtros}
         onMudar={mudarFiltros}
@@ -210,6 +233,19 @@ function MeusPokemons({
           </li>
         ))}
       </ul>
+
+      {/* Abre sozinho na primeira visita com coleção (depois do tutorial geral) ou pelo botão */}
+      {!tutorialGeralAberto && (revendoCuidados || !cuidadosVistos(usuario.id)) && (
+        <Tutorial
+          key={passoCuidados}
+          passos={PASSOS_CUIDADOS}
+          passo={passoCuidados}
+          onProximo={() => (passoCuidados === PASSOS_CUIDADOS.length - 1
+            ? fecharTutorialCuidados()
+            : setPassoCuidados(passoCuidados + 1))}
+          onPular={fecharTutorialCuidados}
+        />
+      )}
     </section>
   );
 
@@ -236,8 +272,11 @@ function MeusPokemons({
 
 MeusPokemons.propTypes = {
   usuario: PropTypes.shape({
+    id: PropTypes.number.isRequired,
     pokemons: PropTypes.arrayOf(formatoPokemon).isRequired,
   }).isRequired,
+  // Enquanto o tutorial de primeiro acesso está aberto, o de cuidados espera
+  tutorialGeralAberto: PropTypes.bool,
   onEscolherInicial: PropTypes.func.isRequired,
   onEvoluir: PropTypes.func.isRequired,
   onCuidar: PropTypes.func.isRequired,

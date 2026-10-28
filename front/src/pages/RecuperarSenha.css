@@ -12,7 +12,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
+  /* Espaçamentos verticais escalam com a altura da tela para evitar scroll */
+  padding: clamp(8px, 2vh, 24px) 16px;
   box-sizing: border-box;
   background: #0b2a5b url('/recuperar-bg.gif') center / cover no-repeat;
   image-rendering: pixelated;
@@ -23,7 +24,7 @@
 .recuperar-pokedex-corpo {
   width: 100%;
   max-width: 420px;
-  padding: 0 16px 16px;
+  padding: 0 16px clamp(10px, 1.6vh, 16px);
   background: var(--dex-red);
   border: 3px solid var(--poke-ink);
   border-radius: 12px;
@@ -103,7 +104,7 @@
 
 .recuperar-pokedex-tela {
   position: relative;
-  padding: 24px 24px 44px;
+  padding: clamp(12px, 2.5vh, 24px) 24px clamp(32px, 5vh, 44px);
   background: #fafafa;
   text-align: center;
   clip-path: polygon(0 0, 100% 0, 100% 100%, 43px 100%, 0 calc(100% - 43px));
@@ -112,7 +113,7 @@
 /* Linhas pontilhadas */
 .recuperar-pokedex-pontilhado {
   height: 0;
-  margin: 20px 0;
+  margin: clamp(10px, 2vh, 20px) 0;
   border: none;
   border-top: 4px dotted var(--poke-ink);
 }
@@ -120,7 +121,7 @@
 /* Setinha ▼ no rodapé */
 .recuperar-pokedex-seta {
   position: absolute;
-  bottom: 14px;
+  bottom: clamp(8px, 1.5vh, 14px);
   left: 50%;
   transform: translateX(-50%);
   border: 10px solid transparent;
@@ -131,15 +132,16 @@
 /* Gengar: sprite de 35x39 ampliado 3x */
 .recuperar-gengar {
   display: block;
-  width: 105px;
-  height: 117px;
-  margin: 0 auto 8px;
+  width: auto;
+  height: clamp(56px, 9vh, 117px);
+  margin: 0 auto clamp(4px, 0.8vh, 8px);
   image-rendering: pixelated;
 }
 
 .recuperar-title {
   margin: 0;
-  font-size: 40px;
+  font-size: clamp(28px, 4.6vh, 40px);
+  line-height: 1.2;
   font-weight: 900;
   letter-spacing: 1px;
   color: var(--poke-yellow);
@@ -149,7 +151,7 @@
 }
 
 .recuperar-subtitle {
-  margin: 8px 0 0;
+  margin: clamp(2px, 0.8vh, 8px) 0 0;
   font-size: 15px;
   color: #555;
 }
@@ -157,14 +159,14 @@
 .recuperar-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: clamp(8px, 1.6vh, 16px);
   text-align: left;
 }
 
 .recuperar-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: clamp(4px, 0.6vh, 6px);
 }
 
 .recuperar-field > span {
@@ -177,7 +179,7 @@
 
 .recuperar-field input {
   width: 100%;
-  padding: 12px 14px;
+  padding: clamp(8px, 1.3vh, 12px) 14px;
   font-size: 16px;
   color: var(--poke-ink);
   background: #f7f7f7;
@@ -250,8 +252,8 @@
 }
 
 .recuperar-submit {
-  margin-top: 8px;
-  padding: 14px;
+  margin-top: clamp(2px, 0.8vh, 8px);
+  padding: clamp(10px, 1.6vh, 14px);
   font-size: 17px;
   font-weight: 800;
   color: #fff;
@@ -280,7 +282,7 @@
 .recuperar-register {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: clamp(6px, 1vh, 10px);
 }
 
 .recuperar-register p {
@@ -291,7 +293,7 @@
 
 .recuperar-register-button {
   width: 100%;
-  padding: 12px;
+  padding: clamp(8px, 1.3vh, 12px);
   font-size: 16px;
   font-weight: 800;
   color: var(--poke-navy);

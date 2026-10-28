@@ -273,7 +273,12 @@ router.get('/treinadores', autenticar, async (req, res) => {
   res.json(busca ? await usuarios.buscarTreinadores(req.usuario.id, busca) : []);
 });
 
-// Quem entrou no jogo nas últimas 24h e pode ser desafiado (time completo)
+// Sinal de vida do front com o jogo aberto: o autenticar já marca o treinador como online
+router.post('/presenca', autenticar, (req, res) => {
+  res.status(204).end();
+});
+
+// Quem entrou no jogo nas últimas 24h, está online e pode ser desafiado (time completo)
 router.get('/treinadores/ativos', autenticar, async (req, res) => {
   res.json(await usuarios.listarTreinadoresAtivos(req.usuario.id));
 });

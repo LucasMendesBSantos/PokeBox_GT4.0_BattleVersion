@@ -1,0 +1,35 @@
+.tabela-tipos {
+  max-width: min(560px, calc(100vw - 24px));
+  max-height: calc(100svh - 24px);
+  padding: 0;
+  overflow: auto;
+  background: #1f5277;
+  border: 3px solid #1d1d1f;
+  border-radius: 16px;
+}
+
+.tabela-tipos::backdrop {
+  background: rgba(0, 20, 50, 0.7);
+}
+
+.tabela-tipos img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.tabela-tipos-fechar {
+  position: sticky;
+  top: 8px;
+  float: right;
+  margin: 8px 8px -44px 0;
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  color: #003a70;
+  background: #ffcb05;
+  border: 2px solid #1d1d1f;
+  border-radius: 999px;
+  cursor: pointer;
+}

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import PropTypes from 'prop-types';
 import CartaPokemon from '../components/CartaPokemon';
 import FiltrosColecao from '../components/FiltrosColecao';
+import TabelaTipos from '../components/TabelaTipos';
 import {
   filtrarEOrdenar, lerFiltros, salvarFiltros, tiposDaColecao,
 } from '../components/colecao';
@@ -94,6 +95,9 @@ function Time({ usuario, onSalvar, onIrParaLoja }) {
       <p className="jogo-texto">
         {`Escolha ${TAMANHO_TIME} Pokémon da coleção. O primeiro abre a batalha, e quando um é nocauteado o próximo da fila entra.`}
       </p>
+      <div className="time-tabela-tipos">
+        <TabelaTipos />
+      </div>
 
       <ol className="time-slots">
         {Array.from({ length: TAMANHO_TIME }, (_, i) => {

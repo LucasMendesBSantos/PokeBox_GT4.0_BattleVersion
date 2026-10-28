@@ -141,3 +141,8 @@
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   }
 }
+
+/* Botão da tabela de tipos, logo abaixo do texto de abertura */
+.time-tabela-tipos {
+  margin: -12px 0 20px;
+}

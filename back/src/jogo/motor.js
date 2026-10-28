@@ -166,7 +166,7 @@ function acertar(estado, indiceJogador, golpe, eventos, rng) {
 
   if (defensor.hp > 0) return null;
   eventos.push({ tipo: 'nocaute', lado: outro(indiceJogador), pokemonId: defensor.pokemonId });
-  // O próximo vivo entra sozinho, para não gastar um turno (e mais 4h) só escolhendo quem entra
+  // O próximo vivo entra sozinho, para não gastar um turno (e mais 1 min) só escolhendo quem entra
   const proximo = oponente.pokemons.findIndex((p) => p.hp > 0);
   if (proximo === -1) return { vencedor: indiceJogador, motivo: 'nocaute' };
   oponente.ativo = proximo;
@@ -195,7 +195,7 @@ function aplicarAcao(estadoAtual, indiceJogador, acao, rng = rngSeguro) {
   }
 
   if (estado.vez !== indiceJogador) {
-    throw new ErroJogo('Não é a sua vez (se o seu prazo de 4h acabou, a vez passou para o oponente).');
+    throw new ErroJogo('Não é a sua vez (se o seu prazo de 1 min acabou, a vez passou para o oponente).');
   }
 
   if (acao.tipo === 'atacar') {
@@ -231,7 +231,7 @@ function aplicarAcao(estadoAtual, indiceJogador, acao, rng = rngSeguro) {
 }
 
 /**
- * Jogada automática quando o prazo de 4h vence: passa a vez.
+ * Jogada automática quando o prazo de 1 min vence: passa a vez.
  * Com TIMEOUTS_PARA_WO timeouts seguidos do mesmo jogador, ele perde por W.O.
  * @param {EstadoBatalha} estadoAtual
  * @returns {Resultado}

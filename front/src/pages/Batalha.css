@@ -265,3 +265,11 @@
   font-weight: 800;
   color: #777;
 }
+
+/* Nome do treinador com o status online/offline ao lado */
+.batalha-treinador {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}

@@ -9,8 +9,10 @@ import { urlArtwork } from '../services/pokeapi';
 import * as api from '../services/api';
 import './Batalha.css';
 
-// Enquanto espera o oponente, confere a cada 15s se ele já jogou
-const ATUALIZAR_MS = 15 * 1000;
+// Durante a batalha confere a cada 2s se o oponente jogou (ou se algum prazo de 1 min venceu)
+const ATUALIZAR_MS = 2 * 1000;
+// O contador do prazo anda de segundo em segundo
+const RELOGIO_MS = 1000;
 
 const MOTIVOS = { nocaute: 'por nocaute', wo: 'por W.O.', desistencia: 'por desistência' };
 
@@ -20,6 +22,7 @@ function Batalha({ batalhaId, onVoltar, onAtualizarUsuario }) {
   const [enviando, setEnviando] = useState(false);
   const [trocando, setTrocando] = useState(false);
   const [confirmarDesistencia, setConfirmarDesistencia] = useState(false);
+  const [agora, setAgora] = useState(Date.now);
 
   const aplicar = useCallback((resposta) => {
     setDados(resposta);
@@ -48,13 +51,18 @@ function Batalha({ batalhaId, onVoltar, onAtualizarUsuario }) {
   }, [batalhaId, aplicar]);
 
   const batalha = dados?.batalha;
-  const esperandoOponente = batalha?.status === 'em_andamento' && !batalha.minhaVez;
+  const emAndamento = batalha?.status === 'em_andamento';
 
+  // Também na sua vez: se o seu minuto acabar, a vez passa e a tela precisa mostrar isso
   useEffect(() => {
-    if (!esperandoOponente) return undefined;
+    if (!emAndamento) return undefined;
     const timer = setInterval(carregar, ATUALIZAR_MS);
-    return () => clearInterval(timer);
-  }, [esperandoOponente, carregar]);
+    const relogio = setInterval(() => setAgora(Date.now()), RELOGIO_MS);
+    return () => {
+      clearInterval(timer);
+      clearInterval(relogio);
+    };
+  }, [emAndamento, carregar]);
 
   const enviarJogada = async (jogada) => {
     setEnviando(true);
@@ -106,10 +114,11 @@ function Batalha({ batalhaId, onVoltar, onAtualizarUsuario }) {
         {voltar}
         <h1 className="jogo-titulo">{`vs ${batalha.oponente}`}</h1>
         {batalha.status === 'em_andamento' && (
-          <p className="batalha-turno" role="status">
+          // Sem role="status": o contador muda a cada segundo e seria lido o tempo todo
+          <p className="batalha-turno">
             {batalha.minhaVez
-              ? `Turno ${batalha.turno} · Sua vez! Faltam ${tempoRestante(batalha.prazoEm)}.`
-              : `Turno ${batalha.turno} · Vez de ${batalha.oponente} (${tempoRestante(batalha.prazoEm)} restantes). Você pode fechar a página.`}
+              ? `Turno ${batalha.turno} · Sua vez! Faltam ${tempoRestante(batalha.prazoEm, agora)}.`
+              : `Turno ${batalha.turno} · Vez de ${batalha.oponente} (${tempoRestante(batalha.prazoEm, agora)} restantes).`}
           </p>
         )}
       </div>
@@ -135,8 +144,8 @@ function Batalha({ batalhaId, onVoltar, onAtualizarUsuario }) {
       )}
 
       <div className="batalha-campo">
-        <LadoCampo lado={oponente} meu={false} />
-        <LadoCampo lado={eu} meu />
+        <LadoCampo lado={oponente} meu={false} online={batalha.oponenteOnline} />
+        <LadoCampo lado={eu} meu online />
       </div>
 
       {erro && <p className="jogo-erro" role="alert">{erro}</p>}

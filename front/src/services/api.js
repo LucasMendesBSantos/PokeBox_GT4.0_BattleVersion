@@ -92,6 +92,8 @@ export const redefinirSenha = (dados) => chamar('POST', '/auth/redefinir-senha',
 
 // Coleção, loja e time
 export const buscarEu = () => chamar('GET', '/eu');
+// Sinal de vida enquanto o jogo está aberto (status online)
+export const marcarPresenca = () => chamar('POST', '/presenca');
 export const escolherInicial = (especieId) => chamar('POST', '/eu/inicial', { especieId });
 export const comprarPokemon = (geracao) => chamar('POST', '/loja/comprar', { geracao });
 export const comprarPokebolas = (quantidade) => chamar('POST', '/loja/pokebolas', { quantidade });

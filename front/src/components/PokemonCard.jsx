@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import {
   TIPOS, TIPO_DESCONHECIDO, formatarNome, formatarNumero,
 } from './tipos';
+import VantagensTipo from './VantagensTipo';
 import './PokemonCard.css';
 
 const STATS = {
@@ -90,6 +91,11 @@ function PokemonCard({ pokemon }) {
           <dd>{pokemon.base_experience ?? '—'}</dd>
         </div>
       </dl>
+
+      <section className="pokemon-card-secao">
+        <h3>Vantagens de tipo</h3>
+        <VantagensTipo tipos={pokemon.types.map(({ type }) => type.name)} />
+      </section>
 
       <section className="pokemon-card-secao">
         <h3>Habilidades</h3>

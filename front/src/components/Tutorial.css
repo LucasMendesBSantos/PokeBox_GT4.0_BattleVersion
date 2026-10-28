@@ -1,0 +1,139 @@
+/* Camada por cima de tudo: bloqueia cliques fora do card enquanto o tutorial está aberto */
+.tutorial {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.tutorial-fundo {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 20, 50, 0.6);
+}
+
+/* Moldura amarela no alvo; a sombra gigante escurece o resto da tela */
+.tutorial-destaque {
+  position: fixed;
+  border: 3px solid var(--poke-yellow);
+  border-radius: 16px;
+  box-shadow: 0 0 0 9999px rgba(0, 20, 50, 0.6);
+  pointer-events: none;
+  transition: top 0.25s, left 0.25s, width 0.25s, height 0.25s;
+}
+
+.tutorial-card {
+  position: fixed;
+  box-sizing: border-box;
+  padding: 18px 20px 16px;
+  background: #fafafa;
+  border: 3px solid var(--poke-ink);
+  border-radius: 16px;
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.35);
+  animation: tutorial-entrar 0.2s ease-out;
+}
+
+.tutorial-card--central {
+  top: 50%;
+  left: 50%;
+  width: min(420px, calc(100vw - 24px));
+  transform: translate(-50%, -50%);
+  border-top: 10px solid var(--dex-red);
+}
+
+/* Seta ▲ no topo do card, apontando para o alvo */
+.tutorial-seta {
+  position: absolute;
+  top: -20px;
+  transform: translateX(-50%);
+  border: 12px solid transparent;
+  border-bottom: 18px solid var(--poke-ink);
+  border-top: none;
+}
+
+.tutorial-seta::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: -8px;
+  border: 8px solid transparent;
+  border-bottom: 12px solid #fafafa;
+  border-top: none;
+}
+
+.tutorial-contador {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--poke-blue);
+}
+
+.tutorial-titulo {
+  margin: 4px 0 8px;
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--poke-navy);
+}
+
+.tutorial-texto {
+  margin: 0 0 16px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #444;
+  /* Respeita as quebras de linha do texto do passo */
+  white-space: pre-line;
+}
+
+.tutorial-acoes {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.tutorial-pular {
+  margin-right: auto;
+  padding: 4px 6px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--poke-blue);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.tutorial-pular:hover {
+  text-decoration: underline;
+}
+
+.tutorial-pular:focus-visible {
+  outline: 3px solid var(--poke-blue);
+  outline-offset: 2px;
+}
+
+/* Card acima do alvo: seta ▼ embaixo do card */
+.tutorial-seta--baixo {
+  top: auto;
+  bottom: -20px;
+  border-top: 18px solid var(--poke-ink);
+  border-bottom: none;
+}
+
+.tutorial-seta--baixo::after {
+  top: auto;
+  bottom: 5px;
+  border-top: 12px solid #fafafa;
+  border-bottom: none;
+}
+
+@keyframes tutorial-entrar {
+  from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-card { animation: none; }
+  .tutorial-destaque { transition: none; }
+}

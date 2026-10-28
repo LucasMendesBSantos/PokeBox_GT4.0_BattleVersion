@@ -14,8 +14,10 @@ CREATE TABLE usuarios (
   -- Compradas na loja, gastas tentando capturar Pokémon na história
   pokebolas   INTEGER NOT NULL DEFAULT 0 CHECK (pokebolas >= 0),
   criado_em   TIMESTAMPTZ NOT NULL DEFAULT now(),
-  -- Última vez que usou o jogo (atualizado no máximo a cada 5 min). Alimenta a lista de treinadores ativos.
-  ultimo_acesso_em  TIMESTAMPTZ NOT NULL DEFAULT now()
+  -- Última vez que usou o jogo (atualizado no máximo a cada 15s). Alimenta a lista de treinadores ativos.
+  ultimo_acesso_em  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- Último sinal de vida com o jogo aberto; online = dentro de config.JANELA_ONLINE_MS. NULL depois de sair.
+  online_em   TIMESTAMPTZ
 );
 -- "Ash" e "ash" são o mesmo treinador
 CREATE UNIQUE INDEX usuarios_login_idx ON usuarios (lower(login));
@@ -107,6 +109,9 @@ CREATE TABLE pokemons (
   -- Pontos de afeto com o dono (carinho, brincar, alimentar). 100 pontos = 1 coração.
   -- Fica no card, então é mantido ao evoluir.
   afeto                SMALLINT NOT NULL DEFAULT 0 CHECK (afeto BETWEEN 0 AND 500),
+  -- Corações que já pagaram a recompensa em Pokécoins (config.RECOMPENSA_POR_CORACAO).
+  -- Não zera na troca: cada coração do card paga uma vez só.
+  coracoes_premiados   SMALLINT NOT NULL DEFAULT 0 CHECK (coracoes_premiados BETWEEN 0 AND 5),
   -- Humor e energia (0 a 100) no momento bem_estar_em; caem com o tempo (config.DESGASTE_POR_HORA),
   -- então o valor de agora é calculado na leitura
   humor                SMALLINT NOT NULL DEFAULT 50 CHECK (humor BETWEEN 0 AND 100),
@@ -298,7 +303,7 @@ CREATE TABLE transacoes_pokecoins (
   valor       INTEGER NOT NULL,              -- positivo = ganho, negativo = gasto
   motivo      TEXT NOT NULL CHECK (motivo IN ('bonus_cadastro', 'compra_loja', 'recompensa_batalha', 'compra_mercado', 'venda_mercado', 'troca',
                                        'compra_pokebola', 'recompensa_historia', 'refazer_historia',
-                                       'roleta_golpes', 'desbloqueio_golpes')),
+                                       'roleta_golpes', 'desbloqueio_golpes', 'recompensa_afeto')),
   batalha_id  BIGINT REFERENCES batalhas(id), -- preenchido quando motivo = recompensa_batalha
   anuncio_id  BIGINT REFERENCES anuncios(id), -- preenchido nas compras e trocas do mercado
   criado_em   TIMESTAMPTZ NOT NULL DEFAULT now()

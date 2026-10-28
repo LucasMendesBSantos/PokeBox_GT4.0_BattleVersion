@@ -37,7 +37,7 @@ export function descreverEventos(eventos, estado) {
       case 'entrou':
         return `${login(evento.lado)} colocou ${formatarNome(estado.lados[evento.lado].pokemons[evento.indice].nome)} em campo.`;
       case 'timeout':
-        return `${login(evento.lado)} perdeu o prazo de 4h (${evento.timeoutsSeguidos}/2) e a vez passou.`;
+        return `${login(evento.lado)} perdeu o prazo de 1 min (${evento.timeoutsSeguidos}/2) e a vez passou.`;
       case 'desistiu':
         return `${login(evento.lado)} desistiu.`;
       default:

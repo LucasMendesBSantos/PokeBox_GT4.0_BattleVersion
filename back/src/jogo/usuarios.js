@@ -10,7 +10,8 @@ const { rngSeguro, inteiroEntre } = require('./aleatorio');
 
 const scrypt = promisify(crypto.scrypt);
 const SESSAO_DURACAO_MS = 30 * 24 * 60 * 60 * 1000;
-const ATUALIZAR_ACESSO_MS = 5 * 60 * 1000;
+// Grava o acesso/presença no máximo a cada 15s, para não escrever no banco a cada requisição
+const ATUALIZAR_ACESSO_MS = 15 * 1000;
 
 // ---------------------------------------------------------------------------
 // Senha e sessão
@@ -43,27 +44,33 @@ async function criarSessao(usuarioId) {
 
 /**
  * Usuário dono do token, ou null se o token não existe ou expirou.
- * Também marca o último acesso (para a lista de treinadores ativos), mas só
- * grava se passou de ATUALIZAR_ACESSO_MS, para não escrever no banco a cada requisição.
+ * Também marca o último acesso e a presença online (lista de treinadores e status na batalha),
+ * mas só grava se passou de ATUALIZAR_ACESSO_MS, para não escrever no banco a cada requisição.
  */
 async function usuarioDaSessao(token) {
   const { rows } = await pool.query(
-    `SELECT u.id, u.login, u.pokecoins, u.pokebolas, u.ultimo_acesso_em
+    `SELECT u.id, u.login, u.pokecoins, u.pokebolas, u.ultimo_acesso_em, u.online_em
        FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id
       WHERE s.token_hash = $1 AND s.expira_em > now()`,
     [hashToken(token)],
   );
   if (!rows[0]) return null;
 
-  const { ultimo_acesso_em: ultimoAcesso, ...usuario } = rows[0];
-  if (Date.now() - ultimoAcesso.getTime() > ATUALIZAR_ACESSO_MS) {
-    await pool.query('UPDATE usuarios SET ultimo_acesso_em = now() WHERE id = $1', [usuario.id]);
+  const { ultimo_acesso_em: ultimoAcesso, online_em: onlineEm, ...usuario } = rows[0];
+  const antigo = (data) => !data || Date.now() - data.getTime() > ATUALIZAR_ACESSO_MS;
+  if (antigo(ultimoAcesso) || antigo(onlineEm)) {
+    await pool.query('UPDATE usuarios SET ultimo_acesso_em = now(), online_em = now() WHERE id = $1', [usuario.id]);
   }
   return usuario;
 }
 
+/** Fecha a sessão e deixa o treinador offline na hora (sem esperar JANELA_ONLINE_MS) */
 async function encerrarSessao(token) {
-  await pool.query('DELETE FROM sessoes WHERE token_hash = $1', [hashToken(token)]);
+  await pool.query(
+    `WITH fechada AS (DELETE FROM sessoes WHERE token_hash = $1 RETURNING usuario_id)
+     UPDATE usuarios SET online_em = NULL WHERE id IN (SELECT usuario_id FROM fechada)`,
+    [hashToken(token)],
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -108,7 +115,7 @@ async function entrar(login, senha) {
     throw new ErroJogo('Usuário ou senha incorretos.');
   }
   const { senha_hash: _, ...usuario } = encontrado;
-  await pool.query('UPDATE usuarios SET ultimo_acesso_em = now() WHERE id = $1', [usuario.id]);
+  await pool.query('UPDATE usuarios SET ultimo_acesso_em = now(), online_em = now() WHERE id = $1', [usuario.id]);
   return { usuario, token: await criarSessao(usuario.id) };
 }
 
@@ -148,8 +155,9 @@ async function buscarTreinadores(usuarioId, busca) {
 }
 
 /**
- * Treinadores que usaram o jogo nas últimas JANELA_TREINADORES_ATIVOS_HORAS e
- * podem ser desafiados agora (time completo), do acesso mais recente para o mais antigo.
+ * Treinadores que usaram o jogo nas últimas JANELA_TREINADORES_ATIVOS_HORAS, estão online agora
+ * (JANELA_ONLINE_MS) e podem ser desafiados (time completo), do acesso mais recente para o mais antigo.
+ * Quem está offline fica fora, mas ainda pode ser desafiado pelo login.
  * Para cada um diz também se já existe um desafio pendente ou batalha em andamento
  * entre os dois, para o front não oferecer um desafio que o back recusaria.
  * @param {number} usuarioId  quem está pedindo (fica fora da lista)
@@ -176,11 +184,12 @@ async function listarTreinadoresAtivos(usuarioId) {
        JOIN especies e ON e.id = p.especie_id
       WHERE u.id <> $1
         AND u.ultimo_acesso_em > now() - make_interval(hours => $2)
+        AND u.online_em > now() - make_interval(secs => $4)
       GROUP BY u.id
      HAVING count(*) = $3
       ORDER BY u.ultimo_acesso_em DESC
       LIMIT 50`,
-    [usuarioId, config.JANELA_TREINADORES_ATIVOS_HORAS, config.TAMANHO_TIME],
+    [usuarioId, config.JANELA_TREINADORES_ATIVOS_HORAS, config.TAMANHO_TIME, config.JANELA_ONLINE_MS / 1000],
   );
   return rows;
 }

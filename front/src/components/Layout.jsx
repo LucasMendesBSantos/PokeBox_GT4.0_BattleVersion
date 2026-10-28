@@ -29,12 +29,13 @@ function Layout({
             <span className="layout-titulo">PokeBox</span>
           </div>
 
-          <nav className="layout-menu" aria-label="Menu">
+          <nav className="layout-menu" aria-label="Menu" data-tutorial="menu">
             {MENU.map(({ tela, nome }) => (
               <button
                 key={tela}
                 type="button"
                 className="layout-menu-item"
+                data-tutorial={tela}
                 aria-current={telaAtual === tela ? 'page' : undefined}
                 onClick={() => onNavegar(tela)}
               >
@@ -43,7 +44,7 @@ function Layout({
             ))}
           </nav>
 
-          <div className="layout-usuario">
+          <div className="layout-usuario" data-tutorial="saldo">
             <span>{usuario.login}</span>
             <span className="layout-moedas" title="Pokécoins">
               <span className="layout-moeda" aria-hidden="true" />

@@ -12,7 +12,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
+  /* Espaçamentos verticais escalam com a altura da tela para evitar scroll */
+  padding: clamp(8px, 2vh, 24px) 16px;
   box-sizing: border-box;
   /* Pixel art animada; a posição mantém o Pikachu visível em telas estreitas */
   background: #0b2a5b url('/login-bg.gif') 72% center / cover no-repeat;
@@ -27,7 +28,7 @@ humilhador só por conta dos comentarios */
 .pokedex-corpo {
   width: 100%;
   max-width: 420px;
-  padding: 0 16px 16px;
+  padding: 0 16px clamp(10px, 1.6vh, 16px);
   background: var(--dex-red);
   border: 3px solid var(--poke-ink);
   border-radius: 12px;
@@ -107,7 +108,7 @@ humilhador só por conta dos comentarios */
 
 .pokedex-tela {
   position: relative;
-  padding: 24px 24px 44px;
+  padding: clamp(12px, 2.5vh, 24px) 24px clamp(32px, 5vh, 44px);
   background: #fafafa;
   text-align: center;
   clip-path: polygon(0 0, 100% 0, 100% 100%, 43px 100%, 0 calc(100% - 43px));
@@ -116,7 +117,7 @@ humilhador só por conta dos comentarios */
 /* Linhas pontilhadas */
 .pokedex-pontilhado {
   height: 0;
-  margin: 20px 0;
+  margin: clamp(10px, 2vh, 20px) 0;
   border: none;
   border-top: 4px dotted var(--poke-ink);
 }
@@ -124,7 +125,7 @@ humilhador só por conta dos comentarios */
 /* Setinha ▼ no rodapé */
 .pokedex-seta {
   position: absolute;
-  bottom: 14px;
+  bottom: clamp(8px, 1.5vh, 14px);
   left: 50%;
   transform: translateX(-50%);
   border: 10px solid transparent;
@@ -135,9 +136,9 @@ humilhador só por conta dos comentarios */
 /* Pokébola desenhada em CSS */
 .login-pokeball {
   position: relative;
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 12px;
+  width: clamp(48px, 8vh, 80px);
+  height: clamp(48px, 8vh, 80px);
+  margin: 0 auto clamp(4px, 1vh, 12px);
   border: 4px solid var(--poke-ink);
   border-radius: 50%;
   background: linear-gradient(
@@ -154,8 +155,8 @@ humilhador só por conta dos comentarios */
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 24px;
-  height: 24px;
+  width: clamp(16px, 2.4vh, 24px);
+  height: clamp(16px, 2.4vh, 24px);
   transform: translate(-50%, -50%);
   background: #fff;
   border: 4px solid var(--poke-ink);
@@ -176,7 +177,8 @@ humilhador só por conta dos comentarios */
 
 .login-title {
   margin: 0;
-  font-size: 40px;
+  font-size: clamp(28px, 4.6vh, 40px);
+  line-height: 1.2;
   font-weight: 900;
   letter-spacing: 1px;
   color: var(--poke-yellow);
@@ -186,7 +188,7 @@ humilhador só por conta dos comentarios */
 }
 
 .login-subtitle {
-  margin: 8px 0 0;
+  margin: clamp(2px, 0.8vh, 8px) 0 0;
   font-size: 15px;
   color: #555;
 }
@@ -194,14 +196,14 @@ humilhador só por conta dos comentarios */
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: clamp(8px, 1.6vh, 16px);
   text-align: left;
 }
 
 .login-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: clamp(4px, 0.6vh, 6px);
 }
 
 .login-field > span {
@@ -214,7 +216,7 @@ humilhador só por conta dos comentarios */
 
 .login-field input {
   width: 100%;
-  padding: 12px 14px;
+  padding: clamp(8px, 1.3vh, 12px) 14px;
   font-size: 16px;
   color: var(--poke-ink);
   background: #f7f7f7;
@@ -287,8 +289,8 @@ humilhador só por conta dos comentarios */
 }
 
 .login-submit {
-  margin-top: 8px;
-  padding: 14px;
+  margin-top: clamp(2px, 0.8vh, 8px);
+  padding: clamp(10px, 1.6vh, 14px);
   font-size: 17px;
   font-weight: 800;
   color: #fff;
@@ -317,7 +319,7 @@ humilhador só por conta dos comentarios */
 .login-register {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: clamp(6px, 1vh, 10px);
 }
 
 .login-register p {
@@ -328,7 +330,7 @@ humilhador só por conta dos comentarios */
 
 .login-register-button {
   width: 100%;
-  padding: 12px;
+  padding: clamp(8px, 1.3vh, 12px);
   font-size: 16px;
   font-weight: 800;
   color: var(--poke-navy);

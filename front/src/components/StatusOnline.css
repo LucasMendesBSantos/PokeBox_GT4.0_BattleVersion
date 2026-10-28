@@ -1,0 +1,26 @@
+.status-online {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.status-online::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  background: #9ca3af;
+  border: 1.5px solid #1d1d1f;
+  border-radius: 50%;
+}
+
+.status-online[data-online='true'] {
+  color: #1f7a3d;
+}
+
+.status-online[data-online='true']::before {
+  background: #3aaa5f;
+}

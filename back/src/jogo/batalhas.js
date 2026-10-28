@@ -1,7 +1,7 @@
-// Batalhas assíncronas: desafio, jogadas, prazo de 4h e recompensas.
+// Batalhas assíncronas: desafio, jogadas, prazo de 1 min por jogada e recompensas.
 //
 // O prazo é conferido de dois jeitos, e os dois chamam resolverPrazo:
-//   1. agendador.js roda a cada minuto e processa as batalhas vencidas;
+//   1. agendador.js roda a cada 10s e processa as batalhas vencidas;
 //   2. toda leitura/jogada confere o prazo antes, então o jogo continua certo
 //      mesmo se o agendador estiver parado ou atrasado.
 // Toda mudança numa batalha acontece com a linha travada (SELECT ... FOR UPDATE),
@@ -37,20 +37,26 @@ const indiceDo = (estado, usuarioId) => estado.lados.findIndex((lado) => lado.us
 
 // Consulta usada para devolver batalhas ao front, já com o login dos dois lados
 const SELECT_BATALHA = `
-  SELECT b.*, u1.login AS desafiante_login, u2.login AS desafiado_login
+  SELECT b.*, u1.login AS desafiante_login, u2.login AS desafiado_login,
+         u1.online_em AS desafiante_online_em, u2.online_em AS desafiado_online_em
     FROM batalhas b
     JOIN usuarios u1 ON u1.id = b.desafiante_id
     JOIN usuarios u2 ON u2.id = b.desafiado_id`;
 
+const estaOnline = (onlineEm) => Boolean(onlineEm) && Date.now() - onlineEm.getTime() < config.JANELA_ONLINE_MS;
+
 /** Batalha no formato do front, do ponto de vista de quem pediu */
 function descreverBatalha(linha, usuarioId) {
   const souDesafiante = linha.desafiante_id === usuarioId;
+  const desafiante = { id: linha.desafiante_id, login: linha.desafiante_login, online: estaOnline(linha.desafiante_online_em) };
+  const desafiado = { id: linha.desafiado_id, login: linha.desafiado_login, online: estaOnline(linha.desafiado_online_em) };
   return {
     id: linha.id,
     status: linha.status,
-    desafiante: { id: linha.desafiante_id, login: linha.desafiante_login },
-    desafiado: { id: linha.desafiado_id, login: linha.desafiado_login },
-    oponente: souDesafiante ? linha.desafiado_login : linha.desafiante_login,
+    desafiante,
+    desafiado,
+    oponente: souDesafiante ? desafiado.login : desafiante.login,
+    oponenteOnline: souDesafiante ? desafiado.online : desafiante.online,
     souDesafiante,
     minhaVez: linha.status === 'em_andamento' && linha.vez_de === usuarioId,
     turno: linha.turno,
@@ -125,7 +131,7 @@ async function expirarSeVencido(client, batalha, agora = new Date()) {
 
 /**
  * O desafiado aceita ou recusa. Ao aceitar, os dois times são congelados no
- * estado da batalha e o relógio de 4h começa para quem joga primeiro.
+ * estado da batalha e o relógio de 1 min começa para quem joga primeiro.
  */
 async function responderDesafio(usuarioId, batalhaId, aceitar) {
   // Expira numa transação própria, para ficar gravado mesmo se a resposta abaixo for recusada

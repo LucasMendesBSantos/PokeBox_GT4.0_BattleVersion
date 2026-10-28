@@ -6,6 +6,7 @@ import {
 } from 'react';
 import FiltrosPokemons from '../components/FiltrosPokemons';
 import PokemonCard from '../components/PokemonCard';
+import TabelaTipos from '../components/TabelaTipos';
 import { buscarFiltro, buscarPokemon, listarPokemons } from '../services/pokeapi';
 import './Pokemons.css';
 
@@ -215,6 +216,7 @@ function Pokemons() {
           <p className="pokemons-contagem" aria-live="polite">
             {`${filtrados.length} de ${lista.length} Pokémon`}
           </p>
+          <TabelaTipos />
         </div>
 
         <FiltrosPokemons

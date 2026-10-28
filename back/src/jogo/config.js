@@ -50,11 +50,14 @@ module.exports = {
   BONUS_EVOLUCAO: { chance: 0.3, minimo: 1, maximo: 5 },
 
   // Batalha
-  PRAZO_JOGADA_MS: 4 * HORA_MS,
+  PRAZO_JOGADA_MS: 60 * 1000, // 1 minuto por jogada
   PRAZO_DESAFIO_MS: 24 * HORA_MS,
   DESAFIOS_PENDENTES_MAXIMO: 5,
-  // A lista "treinadores para desafiar" mostra quem usou o jogo neste intervalo
+  // A lista "treinadores para desafiar" mostra quem usou o jogo neste intervalo e está online
   JANELA_TREINADORES_ATIVOS_HORAS: 24,
+  // Online = o front mandou sinal de vida (POST /presenca, a cada 20s com o jogo aberto) neste intervalo.
+  // Sair da conta deixa offline na hora.
+  JANELA_ONLINE_MS: 60 * 1000,
   TIMEOUTS_PARA_WO: 2,
   PODER_ATAQUE: 50,
   CHANCE_CRITICO: 1 / 16,
@@ -85,6 +88,9 @@ module.exports = {
   // Sem cuidados, humor e energia caem devagar (pontos por hora)
   DESGASTE_POR_HORA: { humor: 2, energia: 1 },
   BONUS_STATUS_POR_CORACAO: 0.02, // 5 corações = +10% em todos os status
+  // Pokécoins para o dono a cada coração completado. Cada coração do card paga uma vez só,
+  // mesmo que o afeto zere numa troca (senão daria para farmar trocando o card entre contas)
+  RECOMPENSA_POR_CORACAO: 100,
   // Com afeto máximo, o Pokémon aguenta firme com 1 PS um golpe que o nocautearia (uma vez por batalha)
   CHANCE_RESISTIR_AFETO_MAXIMO: 0.3,
 

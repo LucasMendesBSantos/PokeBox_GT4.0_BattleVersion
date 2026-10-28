@@ -191,13 +191,14 @@ function CantinhoCuidado({
     setErro(null);
     try {
       const coracoesAntes = pokemon.afeto.coracoes;
-      const { pokemon: atualizado, ganho } = await onCuidar(pokemon.id, tipo);
+      const { pokemon: atualizado, ganho, pokecoins } = await onCuidar(pokemon.id, tipo);
       let texto = ganho > 0 ? REACOES[tipo](nome) : `${nome} já te adora o máximo possível!`;
       if (atualizado.afeto.coracoes > coracoesAntes) {
         texto += atualizado.afeto.maximo
           ? ` Afeto máximo! Agora ${nome} pode aguentar firme um golpe letal nas batalhas e aprender golpes especiais.`
           : ' Vocês ganharam um novo coração!';
       }
+      if (pokecoins > 0) texto += ` Você ganhou ${pokecoins} Pokécoins!`;
       setReacao(texto);
       setAnimacao((n) => n + 1);
       setHistorico(await api.listarCuidados(pokemon.id));
@@ -323,7 +324,9 @@ function CantinhoCuidado({
           <section className="cantinho-cartao cantinho-cartao--info">
             <h3>Por que cuidar?</h3>
             <p>
-              Cada coração dá <strong>+2% em todos os status</strong>. Com os 5 corações,
+              Cada coração dá <strong>+2% em todos os status</strong> e, quando completa,
+              {' '}
+              <strong>100 Pokécoins</strong> para você. Com os 5 corações,
               {` ${nome} `}
               tem <strong>30% de chance de aguentar com 1 PS</strong> um golpe que o nocautearia
               (uma vez por batalha) e pode aprender <strong>2 golpes especiais</strong> na roleta.

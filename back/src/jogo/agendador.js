@@ -1,9 +1,9 @@
-// "Cron" simples dentro do próprio back: a cada minuto aplica as jogadas com prazo vencido
-// e expira desafios não respondidos. Um atraso de até 1 minuto não importa, porque toda
-// leitura/jogada também confere os prazos.
+// "Cron" simples dentro do próprio back: a cada 10s aplica as jogadas com prazo vencido
+// e expira desafios não respondidos. Com o prazo de 1 min por jogada, roda bem mais que isso;
+// de qualquer jeito toda leitura/jogada também confere os prazos.
 const { processarPrazosVencidos, expirarDesafios } = require('./batalhas');
 
-const INTERVALO_MS = 60 * 1000;
+const INTERVALO_MS = 10 * 1000;
 
 async function rodarUmaVez() {
   const expirados = await expirarDesafios();

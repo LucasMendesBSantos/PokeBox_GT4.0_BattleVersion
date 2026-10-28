@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import { urlArtwork } from '../services/pokeapi';
 import Coracoes from './Coracoes';
+import VantagensTipo from './VantagensTipo';
 import { formatoPokemon, resumoEvolucao } from './formatos';
 import { dadosTipo, formatarNome, formatarNumero } from './tipos';
 import './CartaPokemon.css';
@@ -62,6 +63,8 @@ function CartaPokemon({
         ))}
       </ul>
 
+      <VantagensTipo tipos={pokemon.tipos} />
+
       <div className="carta-nivel">
         <span>{`Nível ${pokemon.nivel}`}</span>
         <span className="carta-xp-texto">
@@ -83,7 +86,7 @@ function CartaPokemon({
         <p className="carta-evolucao-resumo" data-pronto={evolucao.pronto}>{evolucao.texto}</p>
       )}
 
-      <div className="carta-afeto">
+      <div className="carta-afeto" data-tutorial="afeto">
         <Coracoes quantidade={pokemon.afeto.coracoes} tamanho={compacto ? 'pequeno' : 'normal'} />
         {pokemon.afeto.bonusStatus > 0 && (
           <span className="carta-afeto-bonus" title="Bônus do afeto em todos os status">
@@ -93,7 +96,7 @@ function CartaPokemon({
       </div>
 
       {onCuidar && (
-        <button type="button" className="carta-cuidar" onClick={() => onCuidar(pokemon)}>
+        <button type="button" className="carta-cuidar" data-tutorial="cuidar" onClick={() => onCuidar(pokemon)}>
           {`Cuidar de ${nome}`}
         </button>
       )}

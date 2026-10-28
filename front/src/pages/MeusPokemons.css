@@ -154,3 +154,8 @@
   outline: 3px solid var(--poke-blue);
   outline-offset: 2px;
 }
+
+/* Botão que abre o tutorial de cuidados */
+.meus-pokemons-como-cuidar {
+  margin-bottom: 16px;
+}

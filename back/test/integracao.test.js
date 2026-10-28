@@ -188,6 +188,40 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
     assert.equal(dados.pokemons.find((p) => p.id === id).afeto.pontos, 30);
   });
 
+  await s.test('cuidados: cada coração completo paga 100 Pokécoins uma vez só', async () => {
+    const id = t.charmander.id;
+    const ash = { token: t.ash.token };
+    const alimentar = () => api('POST', `/pokemons/${id}/cuidar`, { ...ash, corpo: { tipo: 'alimentar' } });
+    // Libera a espera do alimentar e deixa o card a 10 pontos do 1º coração
+    const liberar = (afeto) => Promise.all([
+      pool.query("DELETE FROM cuidados WHERE pokemon_id = $1 AND tipo = 'alimentar'", [id]),
+      pool.query('UPDATE pokemons SET afeto = $2 WHERE id = $1', [id, afeto]),
+    ]);
+
+    await liberar(90);
+    const antes = await saldo(ash.token);
+    const completou = await alimentar();
+    assert.equal(completou.status, 200, JSON.stringify(completou.dados));
+    assert.equal(completou.dados.pokemon.afeto.coracoes, 1);
+    assert.equal(completou.dados.pokecoins, 100);
+    assert.equal(await saldo(ash.token), antes + 100);
+
+    // Sem completar coração novo, nada
+    await liberar(100);
+    assert.equal((await alimentar()).dados.pokecoins, 0);
+
+    // Perdeu o afeto (ex.: troca) e completou de novo o mesmo coração: não paga outra vez
+    await liberar(90);
+    assert.equal((await alimentar()).dados.pokecoins, 0);
+    assert.equal(await saldo(ash.token), antes + 100);
+
+    // Devolve o card e o saldo como estavam, para os próximos testes (batalha confere saldo exato)
+    await liberar(30);
+    await pool.query('UPDATE pokemons SET coracoes_premiados = 0, humor = 90, energia = 25 WHERE id = $1', [id]);
+    await pool.query('UPDATE usuarios SET pokecoins = $1 WHERE lower(login) = $2', [antes, 'ash']);
+    await pool.query("DELETE FROM transacoes_pokecoins WHERE motivo = 'recompensa_afeto'");
+  });
+
   await s.test('vitrine: destaques, visitas e álbum', async () => {
     // Sem destaques escolhidos, a vitrine mostra o time
     let { dados } = await api('GET', '/vitrines/ash', { token: t.ash.token });
@@ -220,7 +254,7 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
     assert.equal((await api('GET', '/vitrines/ninguem', { token: t.ash.token })).status, 400);
   });
 
-  await s.test('treinadores ativos nas últimas 24h', async () => {
+  await s.test('treinadores online (e ativos nas últimas 24h)', async () => {
     // Sem time completo não aparece
     await api('POST', '/auth/cadastro', { corpo: { login: 'misty', celular: '11777777777', senha: 'agua12345' } });
 
@@ -239,6 +273,23 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
     await api('GET', '/eu', { token: t.ash.token });
     ({ dados } = await api('GET', '/treinadores/ativos', { token: t.gary.token }));
     assert.deepEqual(dados.map((d) => d.login), ['Ash']);
+
+    // Entrou hoje mas está offline (sem sinal de vida há 2 min): some da lista
+    await pool.query("UPDATE usuarios SET online_em = now() - interval '2 minutes' WHERE login = 'Ash'");
+    ({ dados } = await api('GET', '/treinadores/ativos', { token: t.gary.token }));
+    assert.deepEqual(dados, []);
+
+    // O sinal de vida do front deixa online de novo
+    assert.equal((await api('POST', '/presenca', { token: t.ash.token })).status, 204);
+    ({ dados } = await api('GET', '/treinadores/ativos', { token: t.gary.token }));
+    assert.deepEqual(dados.map((d) => d.login), ['Ash']);
+
+    // Sair da conta deixa offline na hora (sessão extra, para não derrubar a usada nos outros testes)
+    const outra = await api('POST', '/auth/login', { corpo: { login: 'ash', senha: 'pikachu123' } });
+    await api('POST', '/auth/sair', { token: outra.dados.token });
+    ({ dados } = await api('GET', '/treinadores/ativos', { token: t.gary.token }));
+    assert.deepEqual(dados, []);
+    await pool.query("UPDATE usuarios SET online_em = now() WHERE login = 'Ash'");
   });
 
   await s.test('desafio: validações', async () => {
@@ -246,6 +297,7 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
     assert.equal((await api('POST', '/batalhas', { token: t.ash.token, corpo: { oponente: 'ninguem' } })).status, 400);
     const desafio = await api('POST', '/batalhas', { token: t.ash.token, corpo: { oponente: 'GARY' } });
     assert.equal(desafio.status, 201);
+    assert.equal(desafio.dados.oponenteOnline, true);
     assert.equal(desafio.dados.status, 'aguardando');
     assert.equal((await api('POST', '/batalhas', { token: t.ash.token, corpo: { oponente: 'gary' } })).status, 400);
     // A lista de ativos avisa dos dois lados que há um desafio pendente
@@ -293,7 +345,7 @@ test('integração', { skip: pular, timeout: 10 * 60 * 1000 }, async (s) => {
     assert.equal((await api('POST', `/batalhas/${t.primeiroDesafio}/jogadas`, { token: vencedor.token, corpo: { tipo: 'atacar' } })).status, 400);
   });
 
-  await s.test('prazo de 4h: 2 timeouts seguidos dão W.O., sem recompensa', async () => {
+  await s.test('prazo de 1 min: 2 timeouts seguidos dão W.O., sem recompensa', async () => {
     const saldos = [await saldo(t.ash.token), await saldo(t.gary.token)];
     const batalha = await criarBatalhaAceita();
     const vencer = async () => {

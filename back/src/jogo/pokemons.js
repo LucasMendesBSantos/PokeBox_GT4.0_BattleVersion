@@ -2,8 +2,9 @@
 const { pool, transacao } = require('../db');
 const {
   sortearAtributos, aplicarXp, evolucoesDisponiveis, descreverPokemon, aplicarCuidado, bemEstarAtual,
-  sortearBonusEvolucao,
+  sortearBonusEvolucao, coracoes,
 } = require('./regras');
+const config = require('./config');
 const { garantirEspecie } = require('./especies');
 const { ErroJogo } = require('./erros');
 const { rngSeguro } = require('./aleatorio');
@@ -155,7 +156,8 @@ async function evoluir(usuarioId, pokemonId, especieDestinoId, rng = rngSeguro) 
 async function cuidar(usuarioId, pokemonId, tipo) {
   return transacao(async (client) => {
     const { rows } = await client.query(
-      'SELECT dono_id, afeto, humor, energia, bem_estar_em FROM pokemons WHERE id = $1 FOR UPDATE',
+      `SELECT dono_id, afeto, humor, energia, bem_estar_em, coracoes_premiados
+         FROM pokemons WHERE id = $1 FOR UPDATE`,
       [pokemonId],
     );
     const pokemon = rows[0];
@@ -174,7 +176,19 @@ async function cuidar(usuarioId, pokemonId, tipo) {
       [pokemonId, novo.afeto, novo.humor, novo.energia, agora],
     );
     await client.query('INSERT INTO cuidados (pokemon_id, tipo, afeto) VALUES ($1, $2, $3)', [pokemonId, tipo, novo.ganho]);
-    return { pokemon: await buscarCard(client, pokemonId), ganho: novo.ganho };
+
+    // Corações completados agora que este card ainda não tinha pago
+    const coracoesNovos = coracoes(novo.afeto) - pokemon.coracoes_premiados;
+    const pokecoins = Math.max(coracoesNovos, 0) * config.RECOMPENSA_POR_CORACAO;
+    if (pokecoins > 0) {
+      await client.query('UPDATE pokemons SET coracoes_premiados = $2 WHERE id = $1', [pokemonId, coracoes(novo.afeto)]);
+      await client.query('UPDATE usuarios SET pokecoins = pokecoins + $2 WHERE id = $1', [usuarioId, pokecoins]);
+      await client.query(
+        "INSERT INTO transacoes_pokecoins (usuario_id, valor, motivo) VALUES ($1, $2, 'recompensa_afeto')",
+        [usuarioId, pokecoins],
+      );
+    }
+    return { pokemon: await buscarCard(client, pokemonId), ganho: novo.ganho, pokecoins };
   });
 }
 

@@ -78,12 +78,16 @@ LojaPokebolas.propTypes = {
   onComprarPokebolas: PropTypes.func.isRequired,
 };
 
-function Loja({ usuario, onComprar, onComprarPokebolas }) {
+function Loja({
+  usuario, onComprar, onComprarPokebolas, onIrParaTime,
+}) {
   // Número da geração em sorteio agora (null quando nenhuma)
   const [comprando, setComprando] = useState(null);
   const [erro, setErro] = useState(null);
   // Os cards comprados nesta visita, do mais novo para o mais antigo
   const [comprados, setComprados] = useState([]);
+  // Card recém-comprado em destaque no meio da tela (null quando fechado)
+  const [revelado, setRevelado] = useState(null);
 
   const podeComprar = usuario.pokecoins >= PRECO;
 
@@ -93,14 +97,13 @@ function Loja({ usuario, onComprar, onComprarPokebolas }) {
     try {
       const { pokemon } = await onComprar(numeroGeracao);
       setComprados((atual) => [pokemon, ...atual]);
+      setRevelado(pokemon);
     } catch (e) {
       setErro(e.message);
     } finally {
       setComprando(null);
     }
   };
-
-  const [ultimo, ...anteriores] = comprados;
 
   return (
     <section className="loja">
@@ -148,24 +151,38 @@ function Loja({ usuario, onComprar, onComprarPokebolas }) {
 
       {erro && <p className="jogo-erro" role="alert">{erro}</p>}
 
-      {ultimo && (
-        <div className="loja-revelado" role="status">
-          <p className="loja-revelado-titulo">
-            {`Você recebeu ${formatarNome(ultimo.nome)} ${formatarNumero(ultimo.mintNumero)}!`}
-            {ultimo.shiny && ' É shiny!'}
-            {ultimo.posicaoTime ? ` Ele entrou no seu time na posição ${ultimo.posicaoTime}.` : ' Ele foi para a sua coleção.'}
+      {revelado && (
+        // showModal no ref: abre como modal (fundo escuro, Esc fecha, foco preso no diálogo)
+        <dialog
+          ref={(dialogo) => dialogo && !dialogo.open && dialogo.showModal()}
+          className="loja-revelado"
+          aria-labelledby="loja-revelado-titulo"
+          onClose={() => setRevelado(null)}
+        >
+          <p id="loja-revelado-titulo" className="loja-revelado-titulo">
+            {`Você recebeu ${formatarNome(revelado.nome)} ${formatarNumero(revelado.mintNumero)}!`}
+            {revelado.shiny && ' É shiny!'}
+            {revelado.posicaoTime ? ` Ele entrou no seu time na posição ${revelado.posicaoTime}.` : ' Ele foi para a sua coleção.'}
           </p>
           <div className="loja-revelado-carta">
-            <CartaPokemon pokemon={ultimo} />
+            <CartaPokemon pokemon={revelado} />
           </div>
-        </div>
+          <div className="loja-revelado-acoes">
+            <button type="button" className="jogo-botao jogo-botao--claro" onClick={() => setRevelado(null)} autoFocus>
+              Comprar mais
+            </button>
+            <button type="button" className="jogo-botao" onClick={() => onIrParaTime()}>
+              Ir para o time
+            </button>
+          </div>
+        </dialog>
       )}
 
-      {anteriores.length > 0 && (
+      {comprados.length > 0 && (
         <>
-          <h2 className="loja-subtitulo">Compras anteriores</h2>
+          <h2 className="loja-subtitulo">Compras desta visita</h2>
           <ul className="loja-grade">
-            {anteriores.map((pokemon) => (
+            {comprados.map((pokemon) => (
               <li key={pokemon.id}><CartaPokemon pokemon={pokemon} compacto /></li>
             ))}
           </ul>
@@ -179,6 +196,7 @@ Loja.propTypes = {
   usuario: PropTypes.shape({ pokecoins: PropTypes.number.isRequired, pokebolas: PropTypes.number }).isRequired,
   onComprar: PropTypes.func.isRequired,
   onComprarPokebolas: PropTypes.func.isRequired,
+  onIrParaTime: PropTypes.func.isRequired,
 };
 
 export default Loja;
